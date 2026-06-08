@@ -1,0 +1,11 @@
+# Ignore everything at the repo root by default.
+/*
+
+# Re-include the things we want to track.
+!/.gitignore
+!/agents/
+!/*.md
+
+# Never track backups, even if they match an allowed pattern above.
+*.bak
+*.bak.*
