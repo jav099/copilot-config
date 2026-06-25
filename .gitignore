@@ -7,6 +7,7 @@
 !/*.md
 !/repo-instructions/
 !/skills/
+!/repo-knowledge/
 
 # Never track backups, even if they match an allowed pattern above.
 *.bak
