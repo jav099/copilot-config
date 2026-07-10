@@ -6,11 +6,12 @@
 
 **Location:** `third_party/blink/web_tests/external/wpt/css/css-grid/grid-lanes/`
 
-~736 non-reference HTML tests + ~527 `-ref.html` references + 8 `-crash.html`. Organized by concern:
+~728 non-reference, non-crash HTML tests + 527 `-ref.html` references + 8 `-crash.html` (~1263 `.html`
+files total; counts are point-in-time). Organized by concern:
 
 | Directory | ~Tests (incl. refs) | Content |
 |-----------|---------------------|---------|
-| `./` (root) | 19 | Top-level masonry layout |
+| `./` (root) | 18 | Top-level masonry layout |
 | `abspos/` | 25 | Out-of-flow / absolutely positioned items |
 | `alignment/` | 133 | `align/justify-content`, `align/justify-self`, `*-items` |
 | `animation/` | 7 | Interpolation/animation (e.g. `flow-tolerance`) |
@@ -108,12 +109,14 @@ tests; no per-test flag scoping is needed. (If a test ever needs the **disabled*
 must add its own `ScopedCSSGridLanesLayoutForTest scoped(false)` — that scoper is auto-generated from
 the flag name, but is **not currently used** anywhere.)
 
-The fixture is friended into the production classes
-(`friend class GridLanesLayoutAlgorithmTest;` in `grid_lanes_layout_algorithm.h`,
-`grid_lanes_running_positions.h`, `grid_lanes_item_group.h`, and `grid/grid_track_collection.h`) so
-tests can call private methods (`ComputeSizingTreeInGridAxis`, `CalculateIntrinsicTrackSizes`) and
-construct `GridLanesRunningPositions` via the testing-only constructor
-(`{running_positions}, tie_threshold, {collapsed_tracks}`).
+The fixture is friended into the production classes so tests can call private methods
+(`ComputeSizingTreeInGridAxis`, `CalculateIntrinsicTrackSizes`) and construct
+`GridLanesRunningPositions` via the testing-only constructor
+(`{running_positions}, tie_threshold, {collapsed_tracks}`). Most use **whole-class** friendship —
+`friend class GridLanesLayoutAlgorithmTest;` in `grid_lanes_layout_algorithm.h` (:89),
+`grid_lanes_running_positions.h` (:186), and `grid/grid_track_collection.h` (:289 and :505) — but
+`grid_lanes_item_group.h` (:68) instead grants a **single-test** friend via
+`FRIEND_TEST_ALL_PREFIXES(GridLanesLayoutAlgorithmTest, CollectGridLanesItemGroupsWithBaseline)`.
 
 ### Common Unit Test Patterns
 

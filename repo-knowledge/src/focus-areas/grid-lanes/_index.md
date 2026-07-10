@@ -36,8 +36,9 @@ of machinery (track sizing, line resolution, sizing trees, subgrid, baselines).
 Conceptually, a grid-lanes container has tracks in **one** axis only (the **grid axis**, sized by the
 regular grid track-sizing algorithm) and packs items along the orthogonal **stacking axis** using
 **running positions** per track (the masonry concept). The primary class of work is the layout
-algorithm and its running-positions placement engine; there is no dedicated paint pillar (it lays out
-normal box fragments). The author of most of this code is `almaher@microsoft.com` (per TODO comments
+algorithm and its running-positions placement engine; there is no dedicated *painter* (it lays out
+normal box fragments), though painting **gap decorations** on grid-lanes is planned and requires
+layout-side work to produce a `GapGeometry` (see architecture.md §9). The author of most of this code is `almaher@microsoft.com` (per TODO comments
 and OWNERS), with `celestepan` and `yanlingwang` contributing to placement/track-sizing.
 
 **Use this when:**
@@ -50,6 +51,7 @@ and OWNERS), with `celestepan` and `yanlingwang` contributing to placement/track
 - Working on baseline / stacking-axis container baselines (`StackingBaselineAccumulator`)
 - Adding/adjusting grid-lanes CSS (`grid-lanes`, `grid-lanes-direction`, `grid-lanes-pack`, `flow-tolerance`)
 - Understanding what is shared vs. grid-lanes-specific relative to `core/layout/grid/`
+- Planning **gap decorations** on grid-lanes (no `GapGeometry` is produced yet — see architecture.md §9)
 - Adding tests under `external/wpt/css/css-grid/grid-lanes/` or `grid_lanes_layout_algorithm_test.cc`
 - Consulting the CSS Grid 3 spec online (see **Spec:** above)
 

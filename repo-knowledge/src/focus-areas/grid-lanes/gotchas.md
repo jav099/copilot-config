@@ -26,7 +26,9 @@ Unlike gap-decorations (three guard points), grid-lanes is effectively gated at 
 (`longhands_custom.cc` ~3687/3704, `css_parsing_utils.cc` ~7186). If the keyword never parses, no
 `LayoutGridLanes` object is created (`layout_object.cc:424`), so the dispatch in `block_node.cc:173`
 and the whole algorithm are never reached. There is **no paint guard** — grid-lanes emits ordinary
-box fragments.
+box fragments. (That does **not** mean gap decorations come for free: they ride a separate *shared*
+paint path under the independent `CSSGapDecoration` flag and are not wired up for grid-lanes yet —
+see architecture.md §9.)
 
 **Consequence for tests:** `blink_unittests` turns experimental features on globally, so
 `display: grid-lanes` parses with no scoper. To test the **off** state you must use the
@@ -75,8 +77,10 @@ masonry packing. Pitfalls:
    whose span max-position is within `tie_threshold_` of the minimum, then picks the first ≥ the
    auto-placement cursor (wrapping). `tie_threshold_` comes from `ResolveFlowToleranceForGridLanes`,
    which resolves the `flow-tolerance` property **against the stacking-axis available size** and
-   **defaults to the font's computed pixel size** when `normal`. `infinite` is a TODO
-   (`length_utils.cc:1379`). Mis-resolving the axis or default changes placement.
+   **defaults to the font's computed pixel size** when `normal`. `infinite` **is** handled — it
+   returns `LayoutUnit::Max()` so every line is a possible line (`length_utils.cc:1384`); a
+   refinement `TODO(celestepan)` sits just above it (`:1379`). Mis-resolving the axis or default
+   changes placement.
 
 9. **Reverse directions are two separate concepts.** `track-reverse`
    (`IsReverseGridLanesTrackDirection` → `is_reverse_track_direction_`) flips the iteration/tie-break
@@ -107,8 +111,11 @@ masonry packing. Pitfalls:
 
 13. **Items are added to the container ONLY in `kFinalPlacement`.** The `kCalculateBaselines` pass
     measures baseline-aligned items and stores per-track baselines but does **not** call
-    `AddResult`. Both passes must update running positions for **all** items (the baseline-skip
-    `continue` happens *after* the running-position update) or placement state desyncs.
+    `AddResult`. Both passes update running positions for **all non-subgrid items** — the
+    baseline-alignment skip `continue` happens *after* the running-position update
+    (`grid_lanes_layout_algorithm.cc:790`) precisely so placement state stays in sync. **Subgrids
+    are the exception:** they hit an earlier `continue` (`:517`) and do **not** update running
+    positions in the baseline pass, so the two passes' position state differs when subgrids exist.
 
 14. **Subgrids are skipped in the baseline pass** to avoid corrupting their cached placement data;
     the subgrid sibling iterator is only advanced during `kFinalPlacement`.
@@ -144,8 +151,11 @@ masonry packing. Pitfalls:
 21. **Auto-placed subgrids juggle a placeholder span.** Sized at the container start
     (`ComputeSetIndicesForSubgrid`), reset to indefinite at placement
     (`FinalizeItemSpanAndGetMaxPosition`), then re-inherited via
-    `RebuildSubgridLayoutDataForResolvedPlacement`. That rebuild re-runs standalone-axis sizing
-    **only for the row case** — `CompleteTrackSizingAlgorithmInStandaloneAxis` has a TODO asking
+    `RebuildSubgridLayoutDataForResolvedPlacement` (`grid_lanes_layout_algorithm.cc:1847`), which
+    re-runs standalone-axis sizing for **any grid subgrid, in whichever axis is standalone**
+    (`if (subgrid_item.node.IsGrid())`, standalone = opposite of the subgridded axis; `:1876`).
+    **Separately** — don't conflate the two — `CompleteTrackSizingAlgorithmInStandaloneAxis` (`:1831`)
+    only does work when the grid axis is rows (`!= kForRows → return`, `:1839`) and carries the TODO
     "Can we get the column case working as well?" (`grid_lanes_layout_algorithm.h:206`).
 
 22. **Nested subgrids are knowingly incorrect.** `RunGridLanesPlacementPhase` has a TODO: "What about

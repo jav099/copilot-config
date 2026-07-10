@@ -183,7 +183,8 @@ Per `#masonry-layout-algorithm`:
    `RunningPositionsIterator`); if none, the first overall.
 
 `tie_threshold_` comes from `ResolveFlowToleranceForGridLanes(style, available_size)` — the
-`flow-tolerance` property (`normal` defaults to the font's computed pixel size; `infinite` TODO).
+`flow-tolerance` property (`normal` defaults to the font's computed pixel size; `infinite` returns
+`LayoutUnit::Max()`, so every line becomes a possible line — `length_utils.cc:1384`).
 
 The item is placed at its span's max-position. `UpdateRunningPositionsForSpan()` advances each
 spanned track's running position to `start + fragment_stacking_axis_contribution` (item size + gap +
@@ -222,8 +223,11 @@ that triggers reverse placement may change.)
 - **`kFinalPlacement`**: positions items using the known track baselines, applies self-alignment,
   and adds results (`container_builder_.AddResult`).
 
-Both passes update running positions for **all** items (so placement state is consistent), but only
-baseline-aligned items contribute baselines. Container baselines are propagated from the chosen
+Both passes update running positions for **all non-subgrid items** (so placement state is
+consistent), but only baseline-aligned items contribute baselines. Subgrid items are skipped entirely
+in `kCalculateBaselines` (an earlier `continue` at `grid_lanes_layout_algorithm.cc:517`, *before* any
+running-position update), so the two passes' position state is **not** identical when subgrids are
+present. Container baselines are propagated from the chosen
 `BaselineAccumulator` (`StackingBaselineAccumulator` for columns, `GridBaselineAccumulator` for
 rows).
 
@@ -285,4 +289,33 @@ Grid-lanes-**specific** additions: `GridLanesLayoutAlgorithm`, `GridLanesRunning
 `GridLanesItemGroup`/`VirtualItems`, `GridLanesNode`, `GridLanesDirection`,
 `StackingBaselineAccumulator`, `LayoutGridLanes`, and the running-positions placement model. There is
 **no** dedicated paint code — grid-lanes produces ordinary `PhysicalBoxFragment`s painted by the
-normal block painting path.
+normal block painting path (it still flows through *shared* paint paths, e.g. stacking/z-order via
+`IsLayoutGridOrGridLanes()` in `paint_layer_stacking_node.cc`).
+
+---
+
+## 9. Paint & Gap Decorations (planned work)
+
+Grid-lanes has **no dedicated painter**, but "no paint pillar" does **not** mean paint is a
+non-concern — this is exactly the area of the next planned feature, **gap decorations on
+grid-lanes**, and the situation is the inverse of what "no paint code" suggests.
+
+- **Gap spacing (gutters) already works.** Grid-axis/stacking-axis gutters are baked into the
+  running positions (`GridLanesRunningPositions` consumes `track_collection.GutterSize()`;
+  `LayoutGridLanes::GridLanesItemOffset()` returns `LayoutUnit()` because "distribution offset is
+  baked into the `gutter_size`").
+- **Gap decorations do NOT work yet.** They are painted by the **shared, fragment-driven**
+  `GapDecorationsPainter` (`core/paint/gap_decorations_painter.h`), dispatched generically in
+  `BoxFragmentPainter` whenever a fragment carries a `GapGeometry`
+  (`box_fragment_painter.cc:1428`: `box_fragment_.GetGapGeometry() && … CSSGapDecorationEnabled()`),
+  under the **independent** `CSSGapDecoration` flag (`status: stable`, separate from
+  `CSSGridLanesLayout`).
+- **The missing piece is layout-side, not paint-side.** Grid produces the geometry
+  (`GapGeometry(ContainerType::kGrid)` → `container_builder_.SetGapGeometry(...)` in
+  `grid_layout_algorithm.cc`), and the shared `BoxFragmentBuilder` grid-lanes already uses exposes
+  `SetGapGeometry()` / `GetGapGeometry()`. **Grid-lanes never calls `SetGapGeometry`** (zero
+  references under `grid_lanes/`), and `GapGeometry::ContainerType` (`gap_geometry.h`) has **no
+  `kGridLanes`** value. So adding gap decorations means: synthesize a `GapGeometry` from the
+  grid-axis track collection + stacking-axis running positions, call `SetGapGeometry`, and likely add
+  a `kGridLanes` container type. Note the masonry **stacking axis has no tracks**, so grid's notion
+  of "cross gaps" does not map directly — only grid-axis gaps and item-edge intersections exist.

@@ -24,7 +24,7 @@ core/
     css_value_keywords.json5         # "grid-lanes", "inline-grid-lanes" display keywords
     css_properties.json5             # display values + grid-lanes-direction/-pack, grid-lanes shorthand, flow-tolerance
     properties/
-      css_parsing_utils.cc           # ConsumeFlowTolerance, grid-lanes parsing (flag-gated ~7186)
+      css_parsing_utils.cc           # ConsumeFlowTolerance (~7907); intrinsic auto-repeat parse flag-gate (~7186)
       longhands/longhands_custom.cc  # display:grid-lanes/inline-grid-lanes flag gating (~3687, 3704); EDisplay mapping
       shorthands/shorthands_custom.cc# grid-lanes shorthand; IsLayoutGridLanes() check (~4002)
     resolver/style_adjuster.cc       # EDisplay::kInlineGridLanes adjustment (~281, 320)
@@ -32,7 +32,8 @@ core/
     computed_style.h                 # GridLanesTrackSizingDirection(), IsDisplayGridLanes(), HasGridTrackAxis() (~1192-1239, 2722)
     grid_lanes_direction.h?          # (NO) — lives under layout/ (see below)
     flow_tolerance.h                 # FlowTolerance style value type
-    grid_enums.h / *                 # EGridLanesPack { kNormal, kDense }
+    grid_enums.h                     # GridPositionSide; GridTrackSizingDirection {kForColumns,kForRows}
+                                     #   (EGridLanesPack {kNormal,kDense} is code-generated into computed_style_base_constants.h; used at computed_style.h:1227)
   layout/
     block_node.cc                    # DISPATCH: IsLayoutGridLanes() -> GridLanesLayoutAlgorithm (~173)
     layout_object.cc                 # FACTORY: EDisplay::kGridLanes -> LayoutGridLanes (~424)
@@ -82,8 +83,9 @@ Notes:
   Chrome. See testing.md.
 - Single guard point conceptually: the **CSS parser** rejects `display: grid-lanes` and the
   `grid-lanes-*` / `flow-tolerance` properties when disabled, so no `LayoutGridLanes` is ever
-  created and the layout algorithm is never reached. There is no separate paint guard (no paint
-  pillar).
+  created and the layout algorithm is never reached. There is no separate paint guard for grid-lanes
+  itself; **gap decorations**, however, ride their own shared paint path under the independent
+  `CSSGapDecoration` flag and are not wired up for grid-lanes yet (see architecture.md §9).
 
 ## How To: Enable / Run Grid-Lanes
 
