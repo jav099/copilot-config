@@ -75,10 +75,25 @@ When reviewing Chromium code and `~/.copilot/repo-knowledge/src/` exists, pass t
 
 ## Step 5: Synthesize
 
-Merge the three reports into one:
+Merge the three reports into one. The final report must use this format every
+time, even when the user does not specify an output format:
 
 1. **De-duplicate** findings raised by multiple reviewers (note the agreement — it raises confidence).
-2. **Group by severity**: Critical → Warning → Suggestion → Nit.
-3. For each finding, attribute which reviewer(s) raised it and keep the file:line and suggested fix.
-4. Note any **disagreements** between reviewers explicitly.
-5. End with an **overall verdict** and the single most important next action.
+2. **Order by severity**: Critical → Warning → Suggestion → Nit.
+3. Number findings sequentially across all severities.
+4. Present findings in one Markdown table with exactly these columns:
+
+   | # | Severity | Reviewer(s) | Location | Concern and detailed explanation | Suggested fix | Panel synthesizer's take |
+   |---:|---|---|---|---|---|---|
+
+5. In **Reviewer(s)**, name every panel member that raised the de-duplicated
+   finding.
+6. In **Concern and detailed explanation**, explain the concrete failure mode,
+   why it matters, and any important example or edge case. Do not merely repeat
+   the reviewer's one-line issue.
+7. In **Panel synthesizer's take**, independently assess the finding: agree,
+   partially agree, disagree, or mark it uncertain, with a concise rationale
+   and priority.
+8. After the table, note reviewer disagreements explicitly. If there are none,
+   say so.
+9. End with an **overall verdict** and the single most important next action.

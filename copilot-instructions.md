@@ -84,25 +84,9 @@ Decision: DELEGATE to [agent] | PROCEED (because [reason])
 
 ### Decision Rule
 
-- **Total >= 3** -> DELEGATE to appropriate agent
-- **Total < 3** -> PROCEED directly (track accumulation)
-- **Multi-file exploration or debugging** -> Always delegate (inherently >= 3)
-
-### Session Task Accumulation
-
-Track tasks done directly in main session. After completing 3 weighted tasks, delegate the next task regardless of size. Counter resets after a subagent delegation.
-
-### Cognitive Trap Detection
-
-Before completing the SCOPE CHECK, ask yourself:
-
-> "Am I about to explain why this task is small?"
-
-If yes, that explanation IS the cognitive trap.
-
-Signals: "just", "quick", "simple", "cleanup" framing, "obviously correct", explaining why this is small, urgency/reactive mode.
-
-When trap detected: bias toward delegation, add 0.5-1.0 to weight total, pause and reconsider.
+- **Total >= 4** -> DELEGATE to appropriate agent
+- **Total < 4** -> PROCEED directly
+- **Multi-file exploration or debugging** -> Always delegate (inherently >= 4)
 
 ---
 
