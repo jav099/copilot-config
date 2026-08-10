@@ -54,6 +54,25 @@ State which third reviewer you chose and the one-line reason before spawning.
 
 Issue all three `Task` calls in a **single response** (one per `agent_type`). Give each the **full diff** plus its role focus. Reuse this template, swapping the focus block:
 
+### Allocate models
+
+Set `model` explicitly on every `Task` call. Use a mixed panel of
+`gpt-5.6-sol` and `claude-opus-5`:
+
+- Follow an exact model mix or reviewer-to-model mapping when the user specifies
+  one.
+- Otherwise, use **2 Sol + 1 Opus** for localized implementation, bug-fix, and
+  test-heavy changes.
+- Use **1 Sol + 2 Opus** for architecture-heavy, cross-cutting,
+  security-sensitive, or tradeoff-heavy changes.
+- Assign models by relevance to the change. Do not permanently bind a model to
+  a reviewer role. Give Opus to the perspective or perspectives most central to
+  the change, and give Sol to the remaining perspective or perspectives.
+- Never use the same model for all three reviewers.
+
+Before spawning, state the selected model composition and each
+reviewer-to-model assignment.
+
 ```
 ## Change under review
 Source: [Gerrit CL / GitHub PR / local diff] [identifier]

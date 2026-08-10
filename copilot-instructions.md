@@ -4,6 +4,7 @@
 
 - Be concise. No filler, no fluff.
 - Never use emdashes. Use commas, periods, or parentheses instead.
+- Use ASD-STE100 for all technical text that users can see.
 - Code comments: only for non-obvious logic. Never reference past code or history (e.g., "this used to be X", "previously this was Y").
 
 ---
@@ -61,38 +62,12 @@ Always get explicit user confirmation before executing git commits or PRs:
 
 ---
 
-## SCOPE CHECK Protocol (Before ANY Work) IMPORTANT
+## Subagents
 
-Before performing ANY task, produce this block:
+The main session will often be used as an orchestrator to spawn subagents for specific tasks.
 
-```scope-check
-Task: [1-line description]
-Steps: [list with weights]
-Total: [sum]
-Trap check: [any cognitive trap signals?]
-Decision: DELEGATE to [agent] | PROCEED (because [reason])
-```
-
-### Weight Reference
-
-| Type | Weight | Examples |
-| ---- | ------ | -------- |
-| Trivial | 0.5 | Known single edit, simple command |
-| Standard | 1.0 | Read file, grep search, typical edit |
-| Exploratory | 2.0 | Multi-file search, analysis |
-| Complex | 3.0 | Debugging, design decision |
-
-### Decision Rule
-
-- **Total >= 4** -> DELEGATE to appropriate agent
-- **Total < 4** -> PROCEED directly
-- **Multi-file exploration or debugging** -> Always delegate (inherently >= 4)
-
----
-
-## Subagent Delegation IMPORTANT
-
-The main session is a **coordinator, not a worker**. ALWAYS prefer delegation for complex work.
+It is VERY important that when spawning subagents you background them and do not block the main session.
+The main session should continue to orchestrate, answer questions, do tasks and synthesize results from subagents.
 
 ### Agent Routing
 
