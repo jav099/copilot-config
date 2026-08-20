@@ -4,6 +4,7 @@
 # Re-include the things we want to track.
 !/.gitignore
 !/agents/
+!/personal-instructions/
 !/*.md
 !/repo-instructions/
 !/skills/
