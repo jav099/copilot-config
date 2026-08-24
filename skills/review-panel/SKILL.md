@@ -1,14 +1,15 @@
 ---
 name: review-panel
-description: "Delegate a code change to a panel of exactly three reviewer subagents and synthesize their findings into one report. Always uses the engineer and architect subagents, then selects a third specialist reviewer (blink-layout-reviewer, blink-reviewer, wpt-expert, ui-ux-engineer, backend-expert, or the built-in security-review) based on the nature of the change. Use when the user asks for a 'review panel', 'panel review', 'review with three reviewers', 'multi-agent review', 'get a panel to review my change', 'review my CL/PR with multiple agents', or supplies a Gerrit CL URL or GitHub PR URL (or asks to review local changes) and wants more than a single reviewer."
+description: "Delegate a code change to a panel of exactly four reviewer subagents and synthesize their findings into one report. Always uses the engineer, architect, and code-simplifier subagents, then selects a fourth specialist reviewer (blink-layout-reviewer, blink-reviewer, wpt-expert, ui-ux-engineer, backend-expert, or the built-in security-review) based on the nature of the change. Use when the user asks for a 'review panel', 'panel review', 'review with multiple reviewers', 'multi-agent review', 'get a panel to review my change', 'review my CL/PR with multiple agents', or supplies a Gerrit CL URL or GitHub PR URL (or asks to review local changes) and wants more than a single reviewer."
 ---
 
 # Review Panel
 
-Review a code change with a panel of **exactly three** reviewer subagents and merge their feedback into one report.
+Review a code change with a panel of **exactly four** reviewer subagents and merge their feedback into one report.
 
 - **engineer** — always
 - **architect** — always
+- **code-simplifier** — always
 - **one specialist** — chosen from the change (Step 3)
 
 ## Step 1: Get the diff
@@ -29,16 +30,17 @@ If the diff exceeds ~5000 lines, warn the user and offer to scope the review to 
 
 ## Step 2: Always-on reviewers
 
-Spawn **engineer** and **architect** every time.
+Spawn **engineer**, **architect**, and **code-simplifier** every time.
 
 - **engineer** — correctness, bugs, edge cases, memory/thread safety, conventions, test coverage.
 - **architect** — design, abstractions, coupling, API surface, long-term maintainability, tradeoffs.
+- **code-simplifier** — behavior-preserving reductions in complexity, nesting, duplication, indirection, and unclear control or data flow.
 
-## Step 3: Select the third reviewer
+## Step 3: Select the fourth reviewer
 
 Inspect the changed file paths and the kind of change. Pick the **first** match top-to-bottom:
 
-| Change signal | Third reviewer |
+| Change signal | Fourth reviewer |
 |---|---|
 | Security-sensitive: auth, crypto, IPC, sandbox, deserialization, parsing untrusted input, URL/permission/origin checks | `security-review` (built-in) |
 | Blink layout: `third_party/blink/renderer/core/layout/**`, esp. grid, masonry, flex, multicol, fragmentation, gap decorations | `blink-layout-reviewer` |
@@ -48,11 +50,11 @@ Inspect the changed file paths and the kind of change. Pick the **first** match 
 | Node.js backend: server, SSE/streaming, API design, process lifecycle, performance hardening | `backend-expert` |
 | None of the above | `security-review` (built-in) as a safe default |
 
-State which third reviewer you chose and the one-line reason before spawning.
+State which fourth reviewer you chose and the one-line reason before spawning.
 
 ## Step 4: Spawn the panel in parallel
 
-Issue all three `Task` calls in a **single response** (one per `agent_type`). Give each the **full diff** plus its role focus. Reuse this template, swapping the focus block:
+Issue all four `Task` calls in a **single response** (one per `agent_type`). Give each the **full diff** plus its role focus. Reuse this template, swapping the focus block:
 
 ### Allocate models
 
@@ -61,14 +63,14 @@ Set `model` explicitly on every `Task` call. Use a mixed panel of
 
 - Follow an exact model mix or reviewer-to-model mapping when the user specifies
   one.
-- Otherwise, use **2 Sol + 1 Opus** for localized implementation, bug-fix, and
+- Otherwise, use **3 Sol + 1 Opus** for localized implementation, bug-fix, and
   test-heavy changes.
-- Use **1 Sol + 2 Opus** for architecture-heavy, cross-cutting,
+- Use **2 Sol + 2 Opus** for architecture-heavy, cross-cutting,
   security-sensitive, or tradeoff-heavy changes.
 - Assign models by relevance to the change. Do not permanently bind a model to
   a reviewer role. Give Opus to the perspective or perspectives most central to
   the change, and give Sol to the remaining perspective or perspectives.
-- Never use the same model for all three reviewers.
+- Never use the same model for all four reviewers.
 
 Before spawning, state the selected model composition and each
 reviewer-to-model assignment.
@@ -82,7 +84,7 @@ Source: [Gerrit CL / GitHub PR / local diff] [identifier]
 [full diff]
 ```
 
-## Your role: [engineer | architect | <specialist>]
+## Your role: [engineer | architect | code-simplifier | <specialist>]
 [role-specific focus from Step 2/3]
 
 ## Output
@@ -90,11 +92,13 @@ For each finding: Severity (Critical/Warning/Suggestion/Nit), Location (file:lin
 End with a verdict: LGTM / LGTM with nits / Needs changes.
 ```
 
-When reviewing Chromium code and `~/.copilot/repo-knowledge/src/` exists, pass the relevant `sections/*.md` (and matching `focus-areas/*`) to engineer and architect so they review against project conventions.
+When reviewing Chromium code and `~/.copilot/repo-knowledge/src/` exists, pass
+the relevant `sections/*.md` and matching `focus-areas/*` files to engineer,
+architect, and code-simplifier so they review against project conventions.
 
 ## Step 5: Synthesize
 
-Merge the three reports into one. The final report must use this format every
+Merge the four reports into one. The final report must use this format every
 time, even when the user does not specify an output format:
 
 1. **De-duplicate** findings raised by multiple reviewers (note the agreement — it raises confidence).
