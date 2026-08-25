@@ -44,6 +44,10 @@ You can use the local Chromium build at `out/debug_full_x64` with Playwright to
 take screenshots, open HTML files, and inspect rendering. Playwright is
 available through `npx` (installed at `/tmp/node_modules`).
 
+The executable path for the local Chromium build is only for macOS,
+and may need to be adjusted for other platforms. Will probably be
+`out/debug_full_x64/chrome` on Linux and Windows.
+
 ```js
 const { chromium } = require('playwright');
 
