@@ -28,6 +28,10 @@ Pick the source from the argument the user passed (if any):
 
 If the diff exceeds ~5000 lines, warn the user and offer to scope the review to specific files.
 
+Capture the change objective from the user's request, PR body, or CL description.
+Use it to define the review boundary. If the objective is unavailable or ambiguous,
+ask the user to clarify it before spawning the panel.
+
 ## Step 2: Always-on reviewers
 
 Spawn **engineer**, **architect**, and **code-simplifier** every time.
@@ -79,6 +83,9 @@ reviewer-to-model assignment.
 ## Change under review
 Source: [Gerrit CL / GitHub PR / local diff] [identifier]
 
+## Objective
+[user request, PR body, or CL description]
+
 ## Diff
 ```diff
 [full diff]
@@ -86,6 +93,22 @@ Source: [Gerrit CL / GitHub PR / local diff] [identifier]
 
 ## Your role: [engineer | architect | code-simplifier | <specialist>]
 [role-specific focus from Step 2/3]
+
+## Review scope
+Review only whether this change correctly and safely implements the stated objective.
+
+You may inspect surrounding code for context, but report a finding only when it:
+- Is introduced, exposed, or materially worsened by this change.
+- Directly prevents the stated objective.
+- Is necessary to understand a concrete failure in the changed behavior.
+
+Do not report unrelated pre-existing defects, broad refactoring opportunities,
+general cleanup, or improvements outside the requested change.
+
+Use this counterfactual test: if reverting the change leaves the concern materially
+unchanged, exclude it unless the change newly depends on or exposes that concern.
+
+Do not invent requirements that are absent from the stated objective.
 
 ## Output
 For each finding: Severity (Critical/Warning/Suggestion/Nit), Location (file:line), Issue, Suggested fix.
@@ -102,21 +125,24 @@ Merge the four reports into one. The final report must use this format every
 time, even when the user does not specify an output format:
 
 1. **De-duplicate** findings raised by multiple reviewers (note the agreement — it raises confidence).
-2. **Order by severity**: Critical → Warning → Suggestion → Nit.
-3. Number findings sequentially across all severities.
-4. Present findings in one Markdown table with exactly these columns:
+2. **Enforce the review boundary** before including a finding. Confirm that it is
+   causally related to the change and relevant to the stated objective. Exclude
+   scope-creep findings even when multiple reviewers raised them.
+3. **Order by severity**: Critical → Warning → Suggestion → Nit.
+4. Number findings sequentially across all severities.
+5. Present findings in one Markdown table with exactly these columns:
 
    | # | Severity | Reviewer(s) | Location | Concern and detailed explanation | Suggested fix | Panel synthesizer's take |
    |---:|---|---|---|---|---|---|
 
-5. In **Reviewer(s)**, name every panel member that raised the de-duplicated
+6. In **Reviewer(s)**, name every panel member that raised the de-duplicated
    finding.
-6. In **Concern and detailed explanation**, explain the concrete failure mode,
+7. In **Concern and detailed explanation**, explain the concrete failure mode,
    why it matters, and any important example or edge case. Do not merely repeat
    the reviewer's one-line issue.
-7. In **Panel synthesizer's take**, independently assess the finding: agree,
+8. In **Panel synthesizer's take**, independently assess the finding: agree,
    partially agree, disagree, or mark it uncertain, with a concise rationale
    and priority.
-8. After the table, note reviewer disagreements explicitly. If there are none,
+9. After the table, note reviewer disagreements explicitly. If there are none,
    say so.
-9. End with an **overall verdict** and the single most important next action.
+10. End with an **overall verdict** and the single most important next action.
