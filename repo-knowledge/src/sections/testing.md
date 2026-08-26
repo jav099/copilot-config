@@ -21,8 +21,6 @@ RenderingTest (PageTestBase)
 **Test pattern:**
 ```cpp
 TEST_F(FlexLayoutAlgorithmTest, MyTest) {
-  ScopedCSSGapDecorationForTest scoped_feature(true);  // Toggle feature flag
-
   SetBodyInnerHTML(R"HTML(
     <div id="flexbox" style="display:flex; column-gap:10px; width:200px">
       <div style="width:50px; height:50px"></div>
@@ -50,11 +48,9 @@ TEST_F(FlexLayoutAlgorithmTest, MyTest) {
 }
 ```
 
-**Feature flag toggling:**
-```cpp
-#include "third_party/blink/renderer/platform/testing/runtime_enabled_features_test_helpers.h"
-ScopedCSSGapDecorationForTest scoped_gap_decoration(true);  // Enable
-```
+**Runtime feature scoping:**
+
+Gap-decoration unit tests need no feature scoper. Set a visible `row-rule` or `column-rule`, run layout, and inspect the fragment or algorithm `GapGeometry`. Only scope runtime features that still exist (for example, grid-lanes off-state tests may scope `CSSGridLanesLayout`).
 
 ### 2. Web Platform Tests (WPT)
 
@@ -74,7 +70,7 @@ Located at `third_party/blink/web_tests/external/wpt/css/`.
 Located at `third_party/blink/web_tests/` (non-WPT). Includes:
 - `fast/` -- Blink-specific fast tests
 - `flag-specific/` -- Tests gated on feature flags
-- `virtual/css-gap-decorations-disabled/` -- Virtual test suite for disabled gap decorations
+- `virtual/disable-css-grid-lanes-layout/` -- Win-only off-state parsing suite for `CSSGridLanesLayout`
 
 ## Running Tests
 
@@ -99,9 +95,8 @@ autoninja -C out/Default blink_tests
 third_party/blink/tools/run_web_tests.py -t Default \
   third_party/blink/web_tests/external/wpt/css/css-gaps/flex/
 
-# Run with specific flags
+# Run all gap-decoration WPTs
 third_party/blink/tools/run_web_tests.py -t Default \
-  --flag-specific=enable-css-gap-decorations \
   third_party/blink/web_tests/external/wpt/css/css-gaps/
 ```
 

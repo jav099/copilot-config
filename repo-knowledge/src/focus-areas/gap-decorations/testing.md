@@ -18,10 +18,13 @@ Organized by container type and concern:
 | `flex/` | ~135 | Flex gap decorations (reftests), including direction/writing-mode |
 | `flex/fragmentation/` | ~45 | Flex fragmented gap decorations |
 | `multicol/` | ~88 | Multicol gap decorations, including direction/writing-mode |
+| `grid-lanes/` | 158 | Grid-axis and stacking-axis rules for row/column lanes, spanners, dense packing, fill-reverse, list assignment order, insets, rule-break, collapsed tracks, and stacking-axis alignment |
 | `agnostic/` | ~12 | Container-agnostic + crash tests |
 | `animation/` | ~26 | Interpolation/animation |
 
-> Counts include `-ref.html` files; approximate and growing (measured 2026-06-25).
+> Counts include `-ref.html` files; approximate and growing (measured 2026-06-25). The grid-lanes count was verified at the current HEAD.
+
+Fragmentation coverage is not present in `grid-lanes/` because fragmented grid-lanes gap geometry is not implemented.
 
 ### WPT Test Types
 
@@ -78,6 +81,7 @@ test_invalid_value("row-rule-break", "invalid");
 | `layout/grid/grid_layout_algorithm_test.cc` | Grid gap geometry verification |
 | `layout/flex/flex_layout_algorithm_test.cc` | Flex gap geometry verification |
 | `layout/column_layout_algorithm_test.cc` | Multicol gap geometry verification |
+| `layout/grid_lanes/grid_lanes_layout_algorithm_test.cc` | Grid-lanes main-gap geometry in both orientations, collapsed tracks, grid-axis alignment, empty/single-track behavior, and overflow bounds; stacking-axis cross-gap behavior is covered by the grid-lanes WPT suite. |
 | `paint/box_paint_invalidator_test.cc` | Gap decoration invalidation |
 | `style/gap_data_list_test.cc` | GapDataList data structure tests |
 | `style/gap_data_test.cc` | GapData data structure tests |
@@ -97,17 +101,7 @@ VerifyCrossGaps(expected_cross_gaps, gap_geometry->GetCrossGaps());
 ### Common Unit Test Pattern
 
 ```cpp
-class GapDecorationTest : public BaseLayoutAlgorithmTest {
- protected:
-  void SetUp() override {
-    BaseLayoutAlgorithmTest::SetUp();
-    // Enable the feature flag
-    scoped_gap_decoration_.emplace(true);
-  }
-
- private:
-  std::optional<ScopedCSSGapDecorationForTest> scoped_gap_decoration_;
-};
+class GapDecorationTest : public BaseLayoutAlgorithmTest {};
 
 TEST_F(GapDecorationTest, BasicGridGaps) {
   SetBodyInnerHTML(R"HTML(
@@ -128,19 +122,9 @@ TEST_F(GapDecorationTest, BasicGridGaps) {
 }
 ```
 
-### Feature Flag Scoping
+### Gap-decoration setup
 
-**Critical:** All gap decoration tests must enable the feature flag:
-
-```cpp
-// In test fixture (preferred for class-wide)
-ScopedCSSGapDecorationForTest scoped_gap_decoration(true);
-
-// Or inline in individual tests
-ScopedCSSGapDecorationForTest scoped_gap_decoration(true);
-```
-
-Without this, gap decoration properties parse as unknown and GapGeometry is never built.
+**Gap-decoration tests require no runtime feature scoper.** Use visible rule style/width/color values so `HasGapRule()` is true, then verify geometry or pixels. Grid-lanes tests still rely on the grid-lanes experimental test environment.
 
 ## Running Tests
 
@@ -198,17 +182,13 @@ ls -dt out/debug_full_x64/layout-test-results_* | head -1
 
 ## Known Failing Tests
 
-| Test | Bug |
-|------|-----|
-| `multicol-gap-decorations-007.html` | crbug.com/445971864 |
-
-(As of 2026-06-25, this is the only css-gaps entry remaining in `TestExpectations`. The previously-listed `flex-gap-decorations-fragmentation-005/006` (crbug.com/357648037) and `grid-gap-decorations-fragmentation-028` (crbug.com/394042462) are no longer marked failing.)
+At this HEAD, `TestExpectations` contains no `external/wpt/css/css-gaps/` entries. Re-check the file rather than preserving a point-in-time failure table.
 
 ## Testing Conventions
 
 - Reftests preferred for visual gap decoration verification (pixel-accurate)
 - Crash tests (`*-crash.html`) for edge cases that previously caused crashes
-- Feature flag MUST be enabled in C++ tests (`ScopedCSSGapDecorationForTest`)
+- Gap-decoration tests require no runtime feature scoper
 - Use `VerifyMainGaps()` / `VerifyCrossGaps()` helpers for geometry verification
 - Always call `UpdateAllLifecyclePhasesForTest()` after DOM changes
 - Test fragmented gap decorations using multi-column containers:

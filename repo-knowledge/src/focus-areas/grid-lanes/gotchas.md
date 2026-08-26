@@ -20,15 +20,7 @@
 
 ## 2. Feature-Flag Gating — Single Choke Point (the CSS parser)
 
-Unlike gap-decorations (three guard points), grid-lanes is effectively gated at **one** place: the
-**CSS parser** rejects `display: grid-lanes` / `inline-grid-lanes` and the `grid-lanes-*` /
-`flow-tolerance` properties when `RuntimeEnabledFeatures::CSSGridLanesLayoutEnabled()` is false
-(`longhands_custom.cc` ~3687/3704, `css_parsing_utils.cc` ~7186). If the keyword never parses, no
-`LayoutGridLanes` object is created (`layout_object.cc:424`), so the dispatch in `block_node.cc:173`
-and the whole algorithm are never reached. There is **no paint guard** — grid-lanes emits ordinary
-box fragments. (That does **not** mean gap decorations come for free: they ride a separate *shared*
-paint path under the independent `CSSGapDecoration` flag and are not wired up for grid-lanes yet —
-see architecture.md §9.)
+Grid-lanes itself is parser-gated by `CSSGridLanesLayout`. Gap-decoration properties and painting have no separate runtime flag. For unfragmented grid-lanes with `HasGapRule()`, layout builds shared `GapGeometry` and attaches it only when the resulting geometry contains at least one main or cross gap; fragmented grid-lanes currently omit that geometry.
 
 **Consequence for tests:** `blink_unittests` turns experimental features on globally, so
 `display: grid-lanes` parses with no scoper. To test the **off** state you must use the
@@ -60,10 +52,9 @@ masonry packing. Pitfalls:
    `start_position` *is* the track's current running position; code that mutates openings must
    preserve this invariant.
 
-5. **New openings are only created when dense-packing.** `UpdateRunningPositionsForSpan` with a
-   `max_running_position_for_span` argument splits an opening, and it `DCHECK(is_dense_packing_)`.
-   `GetEligibleTrackOpeningAndUpdateGridLanesItemSpan` also `DCHECK(is_dense_packing_)`. Don't invoke
-   the opening-search paths outside dense mode.
+5. **New openings are created for dense packing or stacking-axis alignment.**
+   `UpdateRunningPositionsForSpan()` requires one of those modes when it splits an opening. Dense
+   opening search remains dense-only; alignment uses openings to compute center/end/stretch space.
 
 6. **`AccumulateTrackOpeningsToAccommodateItem` returns indices in REVERSE order.** It's a recursive
    backtracking search across adjacent tracks; the caller walks `track_opening_indices` from the end
@@ -138,9 +129,10 @@ masonry packing. Pitfalls:
 18. **`GetName()` returning `"LayoutGridLanes"` is load-bearing.** The header warns it affects a
     production behavior in DevTools (`tool_highlight.ts`). Don't rename casually.
 
-19. **Placement happens AFTER track sizing**, so `must_invalidate_placement_cache` is accepted but
-    **unused** in `GridLanesNode::ConstructGridItems` (kept only for a common call signature with
-    grid). The placement cache is far less relied upon than in grid.
+19. `GridLanesNode::ConstructGridItems` requires `must_invalidate_placement_cache` and sets it from
+    `LayoutGridLanes::IsGridPlacementDirty()`. The value is propagated while building subgrid sizing
+    subtrees so regular-grid descendants invalidate placement caches after ancestor grid-lanes
+    placement inputs change.
 
 ## 8. Subgrid caveats (much is unfinished)
 
@@ -158,8 +150,7 @@ masonry packing. Pitfalls:
     only does work when the grid axis is rows (`!= kForRows → return`, `:1839`) and carries the TODO
     "Can we get the column case working as well?" (`grid_lanes_layout_algorithm.h:206`).
 
-22. **Nested subgrids are knowingly incorrect.** `RunGridLanesPlacementPhase` has a TODO: "What about
-    nested subgrids? Those won't be updated correctly." (`grid_lanes_layout_algorithm.cc:545`).
+22. **Nested regular-grid subgrids receive recursive resolved-placement and baseline handling.** Rebuilding walks nested subgrids, updates inherited track collections, and invalidates min/max caches; deferred nested-subgrid baselines are resolved bottom-up before final alignment. Generic traversal still has a TODO to instantiate `GridLanesLayoutAlgorithm` for grid-lanes subgrids, and grid-lanes-subgrid cases remain incomplete and expected-failing.
 
 23. **`LayoutGridLanes` is missing subgrid methods** that `LayoutGrid` has
     (`layout_grid_lanes.h:31` TODO) — DevTools/queries that work for grid subgrids may not for
@@ -176,11 +167,11 @@ masonry packing. Pitfalls:
     is never paired with `is_fill_reverse`/`is_track_reverse`. A converter that builds an invalid
     combination will crash, not silently coerce.
 
-26. **Alignment & OOF content-alignment are partly TODO.** `RunGridLanesPlacementPhase` defers
-    self-alignment refinements to csswg-drafts#10275 (`:723`), and `Layout()` notes that
-    `justify-content`/`align-content` and `fill-reverse` for **out-of-flow** items are not fully
-    handled yet (`:196`). Fragmentation is unimplemented (TODOs at `:874`; the whole WPT
-    `fragmentation/` dir is `Skip`ped — see testing.md).
+26. Alignment now includes stacking-axis center/end/stretch plus content alignment and fill-reverse.
+    Remaining limits include unresolved explicit-size/stretch semantics, fragmented OOF handling,
+    and some baseline/subgrid details. Fragmentation is partial: column lanes have a
+    break-token/iterator path, while row lanes, spanners, complete break rules, baselines, and
+    fragmented gap decorations remain unfinished.
 
 27. **Many subgrid/standalone-axis/baseline code paths carry `TODO(almaher)`** (e.g.
     `grid_lanes_layout_algorithm.cc` lines 1518/1706/1753/1801/1822/1889/1940/2125). When touching

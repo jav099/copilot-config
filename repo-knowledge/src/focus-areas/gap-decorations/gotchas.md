@@ -12,29 +12,22 @@
 | `GapSegmentStateAggregator` | `STACK_ALLOCATED()` | Lives on stack during layout |
 | `ValueRepeater<T>` | `GarbageCollected` | Must be properly traced |
 
-## 2. Feature Flag Gating -- Three Guard Points
+## 2. Activation and guards
 
-Gap decorations are gated at **three separate points**:
-
-1. **Layout**: Each algorithm checks `RuntimeEnabledFeatures::CSSGapDecorationEnabled() && Style().HasGapRule()` before building `GapGeometry`. If off, no geometry created, no memory consumed.
-
-2. **Paint**: `BoxFragmentPainter` checks `box_fragment_.GetGapGeometry() && !paint_info.ShouldSkipGapDecorations() && RuntimeEnabledFeatures::CSSGapDecorationEnabled()`.
-
-3. **Legacy column-rule suppression**: `PaintColumnRules()` returns early if `box_fragment_.GetGapGeometry() || RuntimeEnabledFeatures::CSSGapDecorationEnabled()` -- prevents legacy multicol painting when gap decorations are active.
-
-**Critical**: `column-rule-color`, `column-rule-style`, `column-rule-width` do NOT have the `CSSGapDecoration` runtime flag because they're legacy properties. When the flag is off, these properties still work via the legacy `PaintColumnRules()` path.
+Gap decorations are unflagged. Layout normally avoids geometry unless `ComputedStyle::HasGapRule()` is true; grid also builds geometry when fragmentation needs gap-suppression data. Paint requires fragment `GapGeometry` and respects `ShouldSkipGapDecorations()`. Legacy multicol `column-rule-*` properties remain supported through the same style, geometry, and shared paint path: `IsGapDecorationsContainer()` recognizes multicol via `SpecifiesColumns()`.
 
 ## 3. Container-Dependent Resolution
 
-| Behavior | Grid | Flex | Multicol |
-|----------|------|------|----------|
-| Cross gap sharing | Shared across all main gaps | Per-main-gap ranges | Shared (like grid) |
-| `rule-break: normal` | `normal` | `normal` | row->`none`, col->`intersection` |
-| `rule-visibility-items: normal` | `all` | `between` | `between` |
-| Main direction | Always `kForRows` | `kForRows` (row) / `kForColumns` (col) | Always `kForRows` |
-| Overlap windows | N/A (aligned) | Yes (non-uniform cross-gap overlap) | N/A (aligned) |
-| Spanners | Affect `GapSegmentState` | No spanners | Create 2 `MainGap`s (`kStart`/`kEnd`) |
-| Flex-line iterator reset | N/A | Iterators reset per flex line | N/A |
+| Behavior | Grid | Grid-lanes | Flex | Multicol |
+|----------|------|------------|------|----------|
+| Cross gap sharing | Shared across all main gaps | Per-lane; each cross gap belongs to one lane | Per-main-gap ranges | Shared (like grid) |
+| `rule-break: normal` | `normal` | `normal` | `normal` | row->`none`, col->`intersection` |
+| `rule-visibility-items: normal` | `all` | `all` | `between` | `between` |
+| Main direction | Always `kForRows` | Grid axis (`kForRows` or `kForColumns`) | `kForRows` (row) / `kForColumns` (col) | Always `kForRows` |
+| Overlap windows | N/A (aligned) | N/A | Yes (non-uniform cross-gap overlap) | N/A (aligned) |
+| Spanners | Affect `GapSegmentState` | Mark blocked main-gap ranges | No spanners | Create 2 `MainGap`s (`kStart`/`kEnd`) |
+
+Grid-lanes main intersections merge neighboring lanes' cross-gap runs. Each stacking-axis cross gap has exactly two lane-boundary intersections. Fragmented grid-lanes gap decorations are not supported.
 
 ## 4. Paint Order
 
@@ -48,7 +41,7 @@ Gap decorations are gated at **three separate points**:
 
 - **Grid**: Most complex. `full_gap_geometry` stored in `GridBreakTokenData`, reused across fragments. Per-fragment geometry created with adjusted main gaps and content block offsets. Cross gap ranges adjusted via `AdjustCrossGapsRangesForFragmentation()`.
 - **Flex**: `FlexGapAccumulator` is per-fragment. `SuppressLastMainGap()` handles fragment boundary row gap suppression.
-- **`main_gap_running_index_`** is **`mutable`** in `GapGeometry` -- mutated during paint-time cross-gap end offset computation. Design compromise; TODO to move state to parent paint call.
+- **Cross-gap owner state is local to paint.** `GapDecorationsPainter` advances a forward-only owner cursor for flex lines or grid-lanes lanes. The mutable `GapGeometry` state that remains is multicol's spanner-adjacent intersection set.
 - Cross gap segment state ranges have a `range_start_idx` per cross gap updated during fragmentation adjustment.
 
 ## 6. Common Mistakes & Sharp Edges
@@ -59,7 +52,7 @@ Gap decorations are gated at **three separate points**:
 
 2. **Don't call `RepeatCount()` on an auto repeater** -- it `CHECK`-crashes. Check `IsAutoRepeater()` first.
 
-3. **`GapDataListIterator` is NOT reentrant** -- a single iterator must process all gaps for one direction. For flex cross gaps, `Reset()` is called per flex line to restart with a new gap count.
+3. `GapDataListIterator` is a one-way sequential cursor and has no reset API. For identity order, paint constructs one iterator for each width, style, and color list on an axis. Reversed flex patterns use `GapDataListValueAccessor`; flex and grid-lanes cross gaps separately advance a paint-local owner cursor.
 
 ### Layout Traps
 
@@ -71,9 +64,9 @@ Gap decorations are gated at **three separate points**:
 
 ### Property/Flag Traps
 
-7. **`column-rule-color` has no runtime flag** -- legacy property. New column-rule features may be active even when `CSSGapDecoration` is disabled.
+7. **Legacy `column-rule-*` properties are unflagged** -- they use the same style, geometry, and shared paint path as other gap-decoration properties.
 
-8. **`column-rule` is the same shorthand for legacy multicol and gap decorations** -- the `column-rule` shorthand (css_properties.json5:~9955) expands to `column-rule-width/style/color`, which are the gap-decoration-aware `GapDataList<T>` longhands. Sites using `column-rule` for multicol get the gap-decoration version when the flag is on. (`-webkit-column-rule` is an alias for `column-rule`.)
+8. **`column-rule` is the same shorthand for legacy multicol and gap decorations** -- it expands to `column-rule-width/style/color`, which are the gap-decoration-aware `GapDataList<T>` longhands. Sites using `column-rule` for multicol use those same longhands. (`-webkit-column-rule` is an alias for `column-rule`.)
 
 ### Style/Optimization Traps
 
@@ -83,6 +76,6 @@ Gap decorations are gated at **three separate points**:
 
 ### Naming Confusion
 
-11. **`GridTrackSizingDirection` is used beyond grid** -- Despite the "Grid" prefix, `kForRows`/`kForColumns` are used universally across grid, flex, and multicol. Known naming issue (see TODO in `gap_geometry.h`).
+11. **`GridTrackSizingDirection` is used beyond grid** -- Despite the "Grid" prefix, `kForRows`/`kForColumns` are used universally across grid, grid-lanes, flex, and multicol. Known naming issue (see TODO in `gap_geometry.h`).
 
 12. **Segment states are precomputed (no longer binary-searched in the hot path)** -- crbug.com/440123087 replaced the per-intersection binary search with a precomputed forward-pass `GapSegmentStateCursor` (O(1) per intersection). A residual `std::lower_bound` remains in `GetIntersectionGapSegmentState()` only for certain overlap-join cross-gap states; a follow-up TODO (crbug.com/440123087) tracks removing it.

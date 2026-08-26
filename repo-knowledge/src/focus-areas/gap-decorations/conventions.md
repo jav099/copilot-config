@@ -29,7 +29,7 @@ core/
     css_repeat_value.h                           # CSSRepeatValue for repeat()
   style/
     gap_data.h                # GapData<T>, ValueRepeater<T>
-    gap_data_list.h           # GapDataList<T>, GapDataListIterator<T>
+    gap_data_list.h           # GapDataList<T>, GapDataListIterator<T>, GapDataListValueAccessor<T>
     computed_style.h          # Style accessors: ColumnRuleColor(), etc.
     grid_enums.h              # GridTrackSizingDirection
   layout/
@@ -43,6 +43,9 @@ core/
       resources/              # Diagrams (PNG) for README
     grid/
       grid_layout_algorithm.cc    # Grid gap geometry (inner GapAccumulator)
+    grid_lanes/
+      grid_lane_data.h/.cc             # Placed lane graph used by gap geometry
+      grid_lanes_gap_accumulator.h/.cc # Grid-lanes gap geometry building
     flex/
       flex_gap_accumulator.h/.cc  # Flex gap geometry building
       flex_layout_algorithm.cc    # FlexGapAccumulator usage
@@ -61,23 +64,18 @@ core/
 - **Converter**: `ConvertGapDecorationColorDataList`, `ConvertGapDecorationStyleDataList`, etc. (in `style_builder_converter.cc`)
 - **Invalidation**: Most properties use `["paint"]` only (geometry is independent), including `*-rule-break` and `*-rule-visibility-items`. `*-rule-style` uses `["paint", "gap-decorations"]` (a dedicated `gap-decorations` invalidation target declared at css_properties.json5:378). Inset, color, width, overlap properties use `["paint"]`.
 - **Default values**: Static factory methods: `GapDataList<StyleColor>::DefaultGapColorDataList()`
-- **Runtime flag**: `"CSSGapDecoration"` on all except `column-rule-color/style/width` (legacy multicol)
+- **Runtime flag**: None. Gap-decoration longhands and shorthands are unflagged.
 - **Inset properties**: `field_template: "<length>"`, support `overlap-join` keyword, `ConvertGapDecorationInsetLength` converter, `percentages_depend_on_used_value: true`
 
 ## Feature Flags
 
-| Flag | Status | Dependencies | Location |
-|------|--------|-------------|----------|
-| `CSSGapDecoration` | `stable` | Depends on `CSSGridGapSuppression` | `runtime_enabled_features.json5` (~line 1651) |
-| `CSSGridGapSuppression` | `stable` | None | Required base flag |
-
-Runtime check: `RuntimeEnabledFeatures::CSSGapDecorationEnabled()`
+Gap decorations have no runtime feature flag at this HEAD. Their longhands and shorthands are unflagged. Do not add `runtime_flag: "CSSGapDecoration"` or call `CSSGapDecorationEnabled()`.
 
 ## How To: Add a New Gap Decoration Property
 
 1. **Define the property** in `css_properties.json5`:
    - Add both `column-*` and `row-*` variants
-   - Set `runtime_flag: "CSSGapDecoration"`
+   - Gap-decoration properties are unflagged; do not add `runtime_flag: "CSSGapDecoration"`
    - Choose `invalidate` targets (`["paint"]` for visual-only, `["layout", "paint"]` for geometry-affecting)
    - If list-valued: use `GapDataList<T>` as `type_name`
 
@@ -104,8 +102,7 @@ Runtime check: `RuntimeEnabledFeatures::CSSGapDecorationEnabled()`
 1. **Create an accumulator** (or build inline) in the container's layout algorithm that constructs `MainGap`s and `CrossGap`s
 2. **Set the `GapGeometry`** on the `BoxFragmentBuilder` via `SetGapGeometry()`
 3. **Determine main direction**: `kForRows` or `kForColumns` based on container semantics
-4. **Implement intersection generation**: Add a case in `GapGeometry::GenerateMainIntersectionList*()` and `GenerateCrossIntersectionList*()` for the new `ContainerType`
-5. **Implement `IsEdgeIntersection()`** for the new container type
-6. **Add container-specific resolution** in `CSSGapDecorationUtils::ResolveRuleBreakValue()` and `ResolveRuleVisibilityItemsValue()`
-7. **Handle fragmentation** if the container supports it
-8. **Add tests**: WPT reftests + C++ unit tests (see testing.md)
+4. Implement the container cases in main/cross intersection generation, `IsIntersectionAtContainerEdge()`, `IsCapIntersection()`, `GetCrossWidthForIntersection()`, `GetCrossDecorationWidthForIntersection()`, and inset handling (`GetMaxInsetWidth()`, `ComputeInsetStart()`, and `ComputeInsetEnd()`). Add any paint-time `cross_gap_owner_index` cursor the container needs. If assignment order differs from geometric order, implement `HasNonIdentityDecorationOrder()` / `DecorationIndexForGap()` and use `GapDataListValueAccessor`.
+5. **Add container-specific resolution** in `CSSGapDecorationUtils::ResolveRuleBreakValue()` and `ResolveRuleVisibilityItemsValue()`
+6. **Handle fragmentation** if the container supports it
+7. **Add tests**: WPT reftests + C++ unit tests (see testing.md)

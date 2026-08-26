@@ -105,10 +105,12 @@ The MC model avoids "rows" and "columns" terminology:
 - `cross_gaps_` -- `Vector<CrossGap>`
 - `inline_gap_size_`, `block_gap_size_` -- gutter sizes
 - `content_inline_start_/end_`, `content_block_start_/end_` -- content box edges
-- `container_type_` -- enum: `kGrid`, `kFlex`, `kMultiColumn`
+- `container_type_` -- enum: `kGrid`, `kGridLanes`, `kFlex`, `kMultiColumn`
 - `main_direction_` -- `GridTrackSizingDirection` (`kForRows` or `kForColumns`)
 - `flex_cross_gap_line_data_` -- optional per-line data for flex
-- `main_gap_running_index_` -- **mutable** state for flex cross-gap computation at paint time
+- `multicol_spanner_adjacent_intersections_` -- remaining mutable paint state, cleared by `InitPaintState()` before each paint
+
+For grid-lanes, main gaps are grid-axis gutters between adjacent non-collapsed lanes. Cross gaps are stacking-axis gutters before placed items, confined to one lane and associated with neighboring main gaps by before/after ranges.
 
 Key methods:
 - `GenerateIntersectionListForGap()` -- dispatches to main vs cross, per container type
@@ -118,6 +120,7 @@ Key methods:
 - `GetIntersectionGapSegmentState()` -- residual lookup (binary search) used only for certain overlap-join cross-gap-state cases. The main paint path reads precomputed per-intersection states O(1) via `GapSegmentStateCursor` (built in a single forward pass during intersection generation; see crbug.com/440123087).
 - `ComputeInkOverflowForGaps()` -- inflates content bounds by decoration half-thickness
 - `AdjustCrossGapsRangesForFragmentation()` -- adjusts ranges for fragmented containers
+- `InitPaintState()` -- clears transient multicol spanner-adjacent state before paint
 
 **`MainGap`** (`main_gap.h`): Gap in the primary axis.
 - `gap_offset_` -- midpoint offset
@@ -148,12 +151,15 @@ Key methods:
 | **Grid** | `grid/grid_layout_algorithm.cc` | Inner `GapAccumulator` class | `kForRows` (rows are main) | Shared across all main gaps (aligned) |
 | **Flex** | `flex/flex_layout_algorithm.cc` via `FlexGapAccumulator` | `FlexGapAccumulator::BuildGapGeometry()` | `kForRows` (row-flex) or `kForColumns` (col-flex) | Per-main-gap ranges (unaligned lines) |
 | **Multicol** | `column_layout_algorithm.cc` via `ColumnGapAccumulator` | `ColumnGapAccumulator::BuildGapGeometry()` | `kForRows` | Shared (like grid). Spanners create 2 `MainGap`s |
+| **Grid-lanes** | `grid_lanes/grid_lanes_layout_algorithm.cc` via `GridLanesGapAccumulator` | `GridLanesGapAccumulator::FinalizeGapGeometry()` | Grid axis (`kForRows` or `kForColumns`) | Per-lane cross-gap runs associated with neighboring main gaps |
 
 **Grid:** Gap geometry built in `GridLayoutAlgorithm::PlaceItems()`. Inner `GapAccumulator` builds main/cross gaps from grid tracks. For fragmentation: `full_gap_geometry` computed once, per-fragment geometries created with adjusted offsets.
 
 **Flex:** `FlexGapAccumulator` builds geometry item-by-item. Each main gap tracks its own before/after cross gap ranges. Per-line cross gap data stores effective gap size and cross gap count per line. `SuppressLastMainGap()` handles fragmentation boundaries.
 
 **Multicol:** Built via a dedicated `ColumnGapAccumulator` (`column_gap_accumulator.h/.cc`) driven from `ColumnLayoutAlgorithm`; `BuildGapGeometry()` is called near layout finish. Spanners generate TWO `MainGap`s (`kStart`/`kEnd`) via `AddStart/EndSpannerMainGapIfNeeded()`; spanner main gaps are not painted. `column-wrap: wrap` creates regular main gaps between rows.
+
+**Grid-lanes:** `GridLanesGapAccumulator` builds main gaps from grid-axis tracks and cross gaps from the placed lane graph. Gap geometry is currently omitted during block fragmentation.
 
 ### Memory Efficiency
 
@@ -177,10 +183,10 @@ Key methods:
 
 1. Read computed style: `rule_colors`, `rule_styles`, `rule_widths` from appropriate direction
 2. Resolve `rule_break` and `rule_visibility` (container-type-aware)
-3. Create `GapDataListIterator`s for width, style, color (lazy iterators with `gap_count`)
-4. For flex cross gaps: **reset iterators per flex line** (multi-value lists restart per line)
-5. If `overlap-join` active: pre-expand cross-direction rule widths
-6. For each gap:
+3. Choose value traversal by ordering: use `GapDataListIterator` for identity/geometric order. Reversed flex placement uses `GapDataListValueAccessor` with `GapGeometry::DecorationIndexForGap()` when placement order differs from geometric paint order. The accessor shares the iterator's leading/auto/trailing region computation without expanding lists.
+4. If `overlap-join` active: pre-expand cross-direction rule widths
+5. For each gap:
+   - For flex and grid-lanes cross gaps, advance a local paint-time owner cursor
    - Skip multicol spanner `MainGap`s
    - Get color, style, width from iterators
    - Generate intersection list on-demand via `GenerateIntersectionListForGap()`
@@ -193,7 +199,7 @@ Key methods:
 ### Paint Integration (`BoxFragmentPainter`)
 
 - `PaintGapDecorations()` called from `PaintObject()` after background + borders
-- Guarded by: `box_fragment_.GetGapGeometry() && !paint_info.ShouldSkipGapDecorations() && RuntimeEnabledFeatures::CSSGapDecorationEnabled()`
+- Guarded by: `!suppress_box_decoration_background && box_fragment_.GetGapGeometry() && !paint_info.ShouldSkipGapDecorations()`
 - **Paint order** via `rule-overlap`:
   - `row-over-column` (default): columns first, then rows (rows ON TOP)
   - `column-over-row`: rows first, then columns

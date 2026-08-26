@@ -2,7 +2,7 @@
 
 ## Type System
 
-- **Never use STL containers as member variables.** Use `WTF::Vector`, `WTF::HashMap`, `blink::String` instead. There's a clang plugin that enforces this. If you must use STL at the boundary, use `ALLOW_DISCOURAGED_TYPE("reason")`.
+- Prefer Blink/WTF containers for Blink-owned collections. Approved STL value/ownership types such as `std::optional` and `std::unique_ptr` are used as members where appropriate; follow the type-specific Blink/clang-plugin rules rather than a blanket ban on STL members.
 
 - **`LayoutUnit` is fixed-point, not float.** It has sub-pixel precision but can overflow. Be careful with large values and cumulative operations.
 
@@ -36,7 +36,7 @@
 
 ## Feature Flags
 
-- **New features MUST be behind `RuntimeEnabledFeatures`** (e.g., `CSSGapDecorationEnabled()`). In tests, use `ScopedCSSGapDecorationForTest scoped(true)`.
+- **Feature gating is feature-specific.** Check `runtime_enabled_features.json5` and each property's `runtime_flag`. Gap-decoration properties and painting are unflagged at this HEAD; do not add `ScopedCSSGapDecorationForTest`.
 
 - **Multiple relayout passes**: Flex layout may run multiple times (`RelayoutWithNewRowSizes()`, `RelayoutAndBreakEarlier()`). Your code must handle being invoked in subsequent passes. Check `relayout_mode_`.
 
@@ -52,7 +52,7 @@
 
 - **`GapGeometry` is fragment-relative.** Each physical fragment has its own `GapGeometry`. Don't assume one `GapGeometry` covers the entire flex container.
 
-- **`main_gap_running_index_` is mutable.** It's modified during paint (const method). This is intentional but fragile -- be aware of re-entrancy.
+- **Paint-time transient state:** flex/grid-lanes cross-gap ownership is a local forward-only cursor in `GapDecorationsPainter`. `GapGeometry` still has mutable multicol spanner-adjacent state; `InitPaintState()` clears it before every paint.
 
 - **Cross gaps for flex have exactly 2 intersection points** (start and end of the item gap). Grid cross gaps have more. Don't assume the same intersection logic applies to both.
 

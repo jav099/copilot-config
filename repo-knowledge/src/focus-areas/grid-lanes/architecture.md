@@ -42,10 +42,16 @@ GridLanesLayoutAlgorithm::Layout()   (LayoutAlgorithm<GridLanesNode, BoxFragment
   |      - FinalizeItemSpanAndGetMaxPosition()        -> GetFirstEligibleLine() for auto-placed
   |      - (dense) GetEligibleTrackOpeningAndUpdateGridLanesItemSpan()
   |      - item_node.Layout(space); align; container_builder_.AddResult()
-  |      - UpdateRunningPositionsForSpan(); UpdateAutoPlacementCursor()
+  |      - UpdateRunningPositionsForSpan(); for auto-placed items only, UpdateAutoPlacementCursor()
   | 5. content alignment / fill-reverse; PlaceOutOfFlowItems()
 container_builder_.SetGridLayoutData(); ToBoxFragment()   -> PhysicalBoxFragment
 ```
+
+`PlaceGridLanesItems()` can persist a per-lane `GridLanesDataVector`. In unfragmented rule-bearing
+containers, `GridLanesGapAccumulator` converts that lane graph into `GapGeometry` and sets it on the
+builder. In block fragmentation, `GridLanesBreakTokenData` carries the lane graph, finalized grid
+subtree, and total intrinsic block size; resumed column layout uses
+`PlaceGridLanesItemsForFragmentation()`.
 
 ---
 
@@ -128,6 +134,8 @@ multicolumn layout" by reading first/last baselines per track from
 `GridLanesRunningPositions::TrackData`. Used only for **column** grid-lanes; row grid-lanes uses the
 regular `GridBaselineAccumulator` (the grid axis is rows).
 
+**Post-placement/fragmentation types:** `GridLanesItemPlacementData` stores placement shared by all lane entries for one item; `GridLanesItemData` and `GridLaneData` form the per-lane graph, including spanners and dense-packed items. `GridLanesBreakTokenData` carries that graph, the finalized layout subtree, and total intrinsic block size; `GridLanesItemIterator` resumes child-break-token items before unstarted lane items; and `GridLanesGapAccumulator` converts the lane graph into grid-lanes `GapGeometry`.
+
 **`LayoutGridLanes`** (`layout_grid_lanes.{h,cc}`): see §1.
 
 ---
@@ -188,8 +196,9 @@ Per `#masonry-layout-algorithm`:
 
 The item is placed at its span's max-position. `UpdateRunningPositionsForSpan()` advances each
 spanned track's running position to `start + fragment_stacking_axis_contribution` (item size + gap +
-margins, clamped ≥ 0). `UpdateAutoPlacementCursor()` moves the cursor to the item's end line (or
-start line in reverse track direction).
+margins, clamped ≥ 0). For an auto-placed item only, `UpdateAutoPlacementCursor()` moves the cursor
+to the item's end line (or start line in reverse track direction); explicitly placed items do not
+move it.
 
 ### Dense packing (`grid-lanes-pack: dense`)
 
@@ -235,9 +244,7 @@ rows).
 
 ## 6. Alignment & Sizing Output
 
-- **Self-alignment**: `justify-self`/`align-self` applied per item via `AlignmentOffset()`. Baseline
-  alignment is supported **only in the grid axis** (one track dimension); the stacking axis uses
-  `AxisEdge::kStart`.
+- **Self-alignment:** Baseline alignment remains limited to the grid axis. In the stacking axis, explicit `align-items`/`align-self` (column lanes) or `justify-items`/`justify-self` (row lanes) enables opening tracking. In unfragmented layout, center/end offsets are applied after openings are finalized and auto-sized stretch items are relaid out to fill available opening space. Fragmentation collection persists alignment offsets or stretch space, but per-fragment stretch relayout remains unfinished.
 - **Content alignment**: `align-content`/`justify-content` along the stacking axis is a single-subject
   problem — `AlignContentOffset()` collapses to start/center/end/baseline (distributed values fall
   back) per `#alignment`, applied via `container_builder_.MoveChildrenInDirection()`.
@@ -256,8 +263,9 @@ Grid-lanes supports subgrids **only in the grid axis** (the stacking axis has no
 - `GridLanesNode::ConstructGridItems(parent_is_auto_placed)` — if the grid-lanes container is itself
   an auto-placed subgrid, **all** its children are marked `is_auto_placed` (their final position in
   the ancestor's tracks is unknown).
-- Placement happens **after** track sizing in grid-lanes, so the placement cache is less relied upon
-  than in grid (`must_invalidate_placement_cache` is accepted but unused — see header comment).
+- Grid-lanes does not cache its own item placement, but `must_invalidate_placement_cache` is used to
+  propagate placement-affecting style changes into regular-grid subgrid descendants, whose caches
+  otherwise do not encode the ancestor grid-lanes named-line position.
 - Auto-placed subgrids get a temporary span at the container start during sizing
   (`ComputeSetIndicesForSubgrid`), reset to indefinite at placement
   (`FinalizeItemSpanAndGetMaxPosition`), then re-inherited/re-sized once the resolved position is
@@ -265,7 +273,7 @@ Grid-lanes supports subgrids **only in the grid axis** (the stacking axis has no
   single source of truth; a fresh `GridLayoutSubtree` is finalized on demand during placement.
 - Subgridded item contributions account for the surrounding subgrid's extra margins / gutter-size
   delta (`#subgrid-size-contribution` treats the subgrid as empty in the subgridded axis).
-- **Nested subgrids** are explicitly flagged as not-yet-correct (TODO in `RunGridLanesPlacementPhase`).
+- Resolved auto-placement recursively rebuilds inherited track collections for a placed regular-grid subgrid and its nested regular-grid subgrids, invalidates stale min/max caches, and re-sizes the placed subgrid's standalone axis. Generic traversal and baseline helpers still have a TODO to use `GridLanesLayoutAlgorithm` for grid-lanes subgrids; those cases remain incomplete and expected-failing.
 
 ---
 
@@ -294,28 +302,21 @@ normal block painting path (it still flows through *shared* paint paths, e.g. st
 
 ---
 
-## 9. Paint & Gap Decorations (planned work)
+## 9. Paint & Gap Decorations
 
-Grid-lanes has **no dedicated painter**, but "no paint pillar" does **not** mean paint is a
-non-concern — this is exactly the area of the next planned feature, **gap decorations on
-grid-lanes**, and the situation is the inverse of what "no paint code" suggests.
+Grid-lanes has no dedicated painter; it uses the shared `GapDecorationsPainter`.
+`GridLanesGapAccumulator` creates `ContainerType::kGridLanes` geometry. Main gaps are grid-axis
+gutters between non-collapsed lanes. Cross gaps are stacking-axis gutters confined to one lane.
+Main-gap segments merge adjacent lanes' cross-gap runs and mark spanner-blocked ranges; each
+grid-lanes cross gap paints between that lane's two grid-axis boundaries. Gap geometry is currently
+omitted during block fragmentation.
 
-- **Gap spacing (gutters) already works.** Grid-axis/stacking-axis gutters are baked into the
-  running positions (`GridLanesRunningPositions` consumes `track_collection.GutterSize()`;
-  `LayoutGridLanes::GridLanesItemOffset()` returns `LayoutUnit()` because "distribution offset is
-  baked into the `gutter_size`").
-- **Gap decorations do NOT work yet.** They are painted by the **shared, fragment-driven**
-  `GapDecorationsPainter` (`core/paint/gap_decorations_painter.h`), dispatched generically in
-  `BoxFragmentPainter` whenever a fragment carries a `GapGeometry`
-  (`box_fragment_painter.cc:1428`: `box_fragment_.GetGapGeometry() && … CSSGapDecorationEnabled()`),
-  under the **independent** `CSSGapDecoration` flag (`status: stable`, separate from
-  `CSSGridLanesLayout`).
-- **The missing piece is layout-side, not paint-side.** Grid produces the geometry
-  (`GapGeometry(ContainerType::kGrid)` → `container_builder_.SetGapGeometry(...)` in
-  `grid_layout_algorithm.cc`), and the shared `BoxFragmentBuilder` grid-lanes already uses exposes
-  `SetGapGeometry()` / `GetGapGeometry()`. **Grid-lanes never calls `SetGapGeometry`** (zero
-  references under `grid_lanes/`), and `GapGeometry::ContainerType` (`gap_geometry.h`) has **no
-  `kGridLanes`** value. So adding gap decorations means: synthesize a `GapGeometry` from the
-  grid-axis track collection + stacking-axis running positions, call `SetGapGeometry`, and likely add
-  a `kGridLanes` container type. Note the masonry **stacking axis has no tracks**, so grid's notion
-  of "cross gaps" does not map directly — only grid-axis gaps and item-edge intersections exist.
+---
+
+## 10. Fragmentation
+
+Block fragmentation has a partial column-grid-lanes implementation. An initial collection pass
+stores a lane graph and finalized layout subtree in `GridLanesBreakTokenData`; resumed fragments use
+`GridLanesItemIterator` to process child break tokens before unstarted lane items. Row grid-lanes
+fragmentation is not supported, spanners and break selection remain incomplete, and gap decorations
+are intentionally not built in fragmented grid-lanes.

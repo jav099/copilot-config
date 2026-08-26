@@ -46,7 +46,7 @@
 | `LogicalOffset`, `PhysicalOffset` | Raw coordinate pairs |
 | `BoxStrut`, `PhysicalBoxStrut` | Margin/padding/border structs |
 
-STL types are allowed at API boundaries or as local variables, but **never as member variables** in Blink classes.
+Prefer Blink/WTF containers for Blink-owned collections. Approved STL value/ownership types such as `std::optional` and `std::unique_ptr` are used as members where appropriate; follow the type-specific Blink/clang-plugin rules rather than a blanket ban on STL members.
 
 ## Layout-Specific Patterns
 

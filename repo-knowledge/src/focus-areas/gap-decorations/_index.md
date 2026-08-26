@@ -1,8 +1,9 @@
 # gap-decorations - Focus Area Knowledge
 
 **Path:** `third_party/blink/renderer/core/layout/gap/`, `core/paint/gap_decorations_painter.*`, `core/css/css_gap_decoration_property_utils.*`, `core/style/gap_data*`
-**Status:** complete
+**Status:** unflagged and implemented for grid, flex, multicol, and grid-lanes; active development continues for fragmentation, ordering, and container-specific edge cases.
 **Generated:** 2026-04-13
+**Updated:** 2026-08-26
 **Spec:** `/Users/javiercon/spec/javier-gaps-1/css-gaps-1/`
 
 ## Sections
@@ -12,14 +13,14 @@
 | [Architecture](architecture.md) | Three-pillar model (style/layout/paint), MC geometry, data flow, per-container differences |
 | [Conventions](conventions.md) | Naming patterns, file organization, property definitions, how-to guides |
 | [Testing](testing.md) | WPT reftests, C++ unit tests, gap verification helpers, known failures |
-| [Gotchas](gotchas.md) | GC ownership, feature flag gating, container-dependent resolution, paint order |
+| [Gotchas](gotchas.md) | GC ownership, activation guards, container-dependent resolution, paint order |
 
 ## Context
 
 This focus area provides deep knowledge specific to the CSS Gap Decorations feature in Blink.
 It supplements (not replaces) the base repo knowledge in `../sections/` and the `css` and `layout` focus areas.
 
-The implementation has three pillars: **Style**, **Layout**, and **Paint**. Layout and Paint are the primary areas of work. Gap decorations are currently implemented for **grid**, **flex**, and **multicol** containers. **Grid-lanes** (masonry) is the next container type to implement.
+The implementation has three pillars: **Style**, **Layout**, and **Paint**. Layout and Paint are the primary areas of work. Gap decorations are implemented for **grid**, **flex**, **multicol**, and **grid-lanes** containers.
 
 **Use this when:**
 

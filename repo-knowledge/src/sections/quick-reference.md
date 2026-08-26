@@ -16,7 +16,7 @@
 | CSS parsing | `core/css/` |
 | Test helpers | `core/testing/core_unit_test_helper.h`, `core/layout/base_layout_algorithm_test.h` |
 | WPT flex tests | `../../web_tests/external/wpt/css/css-flexbox/` |
-| WPT gap tests | `../../web_tests/external/wpt/css/css-gaps/flex/` |
+| WPT gap tests | `../../web_tests/external/wpt/css/css-gaps/` (`agnostic/`, `animation/`, `grid/`, `flex/`, `multicol/`, `grid-lanes/`, `parsing/`) |
 | Runtime feature flags | `platform/runtime_enabled_features.h` |
 
 ## Flex Layout Files at a Glance
@@ -70,11 +70,19 @@ third_party/blink/tools/run_web_tests.py -t Default \
 ## Feature Flag Pattern
 
 ```cpp
-// In source code
-if (RuntimeEnabledFeatures::CSSGapDecorationEnabled()) { ... }
+// Gap decorations are unflagged; layout guards geometry work with style.
+if (Style().HasGapRule()) { /* build GapGeometry */ }
 
-// In tests
-ScopedCSSGapDecorationForTest scoped_gap_decoration(true);
+// Paint also preserves the normal suppression checks.
+if (!suppress_box_decoration_background && box_fragment_.GetGapGeometry() &&
+    !paint_info.ShouldSkipGapDecorations()) {
+  /* paint decorations */
+}
+
+// Grid-lanes itself remains experimental.
+if (RuntimeEnabledFeatures::CSSGridLanesLayoutEnabled()) {
+  /* feature-specific work */
+}
 ```
 
 ## Common Includes for Flex Work

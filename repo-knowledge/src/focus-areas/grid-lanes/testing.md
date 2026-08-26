@@ -16,7 +16,7 @@ files total; counts are point-in-time). Organized by concern:
 | `alignment/` | 133 | `align/justify-content`, `align/justify-self`, `*-items` |
 | `animation/` | 7 | Interpolation/animation (e.g. `flow-tolerance`) |
 | `baseline/` | 80 | Baseline alignment (grid axis) |
-| `fragmentation/` | 6 | Fragmented grid-lanes (currently skipped — see Known Failing) |
+| `../../css-break/grid/grid-lanes/` | 21 HTML files (18 tests + 3 refs) | Fragmentation coverage; `TestExpectations` individually lists 3 imported reftests: general column behavior `[Failure]`, column spanners `[Failure]`, and row grid-lanes `[Timeout]` |
 | `gap/` | 12 | Row/column gap in both axes |
 | `grid-placement/` | 28 | Line resolution / explicit placement |
 | `intrinsic-sizing/` | 121 (+`support/`) | min/max-content sizing of container + items |
@@ -73,7 +73,7 @@ serialization, e.g. `grid-template-columns-intrinsic-auto-repeat-computed.tentat
 ### 5. C++ Unit Tests (GTest)
 
 **Location:** `third_party/blink/renderer/core/layout/grid_lanes/grid_lanes_layout_algorithm_test.cc`
-(in the `blink_unittests` target via `build.gni:763`). ~50 `TEST_F(GridLanesLayoutAlgorithmTest, …)`.
+(in the `blink_unittests` target via `build.gni:763`).
 
 Coverage highlights: `ConstructGridLanesItems`, `GridLanesAutoPlacedItems`, `BuildRanges`,
 `BuildFixedTrackSizes`, `CollectGridLanesItemGroups[WithBaseline]`,
@@ -81,6 +81,10 @@ Coverage highlights: `ConstructGridLanesItems`, `GridLanesAutoPlacedItems`, `Bui
 `ExpandFlexibleTracks`, `{Column,Row}AutoFit*/AutoFill*` placement matrices, `GetFirstEligibleLine`,
 `GetMaxPositionsForAllTracks`, `{Orthogonal,}AppendSubgriddedItems{Columns,Rows}`,
 `AutoPlacedSubgriddedItemsAreAutoPlaced`, `Subgrid{Rows,Columns}IgnoredIn{Column,Row}GridLanes`.
+Coverage now also includes placement-cache invalidation; grid-lanes `GapGeometry`; collapsed tracks,
+alignment, and overflow bounds; fragmentation lane/break-token snapshots; dense-packed spanners;
+stacking-axis end/stretch alignment; content alignment; and fill/track reverse interactions. Avoid
+maintaining a brittle test-count claim.
 
 ### Test Fixture & Flag Scoping
 
@@ -99,15 +103,13 @@ class GridLanesLayoutAlgorithmTest : public BaseLayoutAlgorithmTest {
 };
 ```
 
-**Critical difference from gap-decorations:** there is **NO `ScopedCSSGridLanesLayoutForTest`**.
-`CSSGridLanesLayout` is `status: experimental`, and `blink_unittests` enables all experimental
-features by default (`ScopedUnittestsEnvironmentSetup` →
+**Critical difference from gap decorations:** current Grid Lanes tests do not use
+`ScopedCSSGridLanesLayoutForTest`, because `blink_unittests` enables experimental features globally.
+The global setup path is `ScopedUnittestsEnvironmentSetup` →
 `WebRuntimeFeatures::EnableExperimentalFeatures(true)` →
 `RuntimeEnabledFeatures::SetExperimentalFeaturesEnabled(true)`, in
-`platform/testing/testing_platform_support.cc`). So `display: grid-lanes` simply parses in unit
-tests; no per-test flag scoping is needed. (If a test ever needs the **disabled** state in C++, it
-must add its own `ScopedCSSGridLanesLayoutForTest scoped(false)` — that scoper is auto-generated from
-the flag name, but is **not currently used** anywhere.)
+`platform/testing/testing_platform_support.cc`. The generated scoper remains available for an
+explicit disabled-state C++ test.
 
 The fixture is friended into the production classes so tests can call private methods
 (`ComputeSizingTreeInGridAxis`, `CalculateIntrinsicTrackSizes`) and construct
@@ -209,18 +211,10 @@ ls -dt out/debug_full_x64/layout-test-results_* | head -1
 
 ## Known Failing Tests
 
-All grid-lanes failures are currently tracked under the **umbrella bug crbug.com/1076027** in
-`TestExpectations` (21 entries — the feature is in active development):
-
-| Area | Entries | Notes |
-|------|---------|-------|
-| `grid-lanes/fragmentation/*` | 1 (whole dir) | `[ Failure Skip ]` — fragmentation not yet implemented |
-| `grid-lanes/subgrid/grid-subgridded-to-grid-lanes/track-sizing/*` | 5 | auto-track-sizing + column-subgrid-with-row-standalone-axis-size 006–009 |
-| `grid-lanes/subgrid/grid-lanes-subgridded-to-grid-lanes/track-sizing/*` | 3 | grid-lanes-subgrid[-flex/-intrinsic-sizing] |
-| `grid-lanes/alignment/{column-align-self,column-align-items,row-justify-self,row-justify-items}-00{1,2,3}` | 12 | self/items alignment in the stacking-vs-grid axis |
-
-These reflect incomplete areas (fragmentation, certain subgrid track-sizing, and some
-stacking-axis alignment), not flaky tests.
+At this HEAD, `TestExpectations` has 21 grid-lanes entries under crbug.com/1076027: 3 fragmentation
+tests (general column behavior `[Failure]`, column spanners `[Failure]`, row grid-lanes `[Timeout]`),
+9 grid-lanes-subgridded-to-grid-lanes tests, and 9 grid-lanes-subgridded-to-grid tests. There are no
+remaining stacking-axis alignment entries in this block.
 
 ## Testing Conventions
 

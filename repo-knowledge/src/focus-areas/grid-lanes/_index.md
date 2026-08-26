@@ -3,6 +3,7 @@
 **Path:** `third_party/blink/renderer/core/layout/grid_lanes/` (reuses `core/layout/grid/`; CSS in `core/css/`; DevTools in `core/inspector/inspector_highlight.cc`)
 **Status:** experimental / in active development (runtime flag `CSSGridLanesLayout`, status `experimental`, public)
 **Generated:** 2026-06-25
+**Updated:** 2026-08-26
 **Spec:** Online only — no local spec mirror. CSS Grid Level 3 ("masonry"):
 - Editor's Draft: https://drafts.csswg.org/css-grid-3/
 - Masonry layout algorithm: https://drafts.csswg.org/css-grid-3/#masonry-layout-algorithm
@@ -37,9 +38,12 @@ Conceptually, a grid-lanes container has tracks in **one** axis only (the **grid
 regular grid track-sizing algorithm) and packs items along the orthogonal **stacking axis** using
 **running positions** per track (the masonry concept). The primary class of work is the layout
 algorithm and its running-positions placement engine; there is no dedicated *painter* (it lays out
-normal box fragments), though painting **gap decorations** on grid-lanes is planned and requires
-layout-side work to produce a `GapGeometry` (see architecture.md §9). The author of most of this code is `almaher@microsoft.com` (per TODO comments
-and OWNERS), with `celestepan` and `yanlingwang` contributing to placement/track-sizing.
+normal box fragments). Grid-lanes uses the shared gap-decoration paint path and now produces
+layout-side `GapGeometry` through `GridLanesGapAccumulator`. Coverage includes grid-axis and
+stacking-axis rules, spanners, dense packing, fill-reverse, lists, insets, and alignment. Fragmented
+grid-lanes gap decorations remain unsupported. The author of most of this code is
+`almaher@microsoft.com` (per TODO comments and OWNERS), with `celestepan` and `yanlingwang`
+contributing to placement/track-sizing.
 
 **Use this when:**
 
@@ -51,7 +55,7 @@ and OWNERS), with `celestepan` and `yanlingwang` contributing to placement/track
 - Working on baseline / stacking-axis container baselines (`StackingBaselineAccumulator`)
 - Adding/adjusting grid-lanes CSS (`grid-lanes`, `grid-lanes-direction`, `grid-lanes-pack`, `flow-tolerance`)
 - Understanding what is shared vs. grid-lanes-specific relative to `core/layout/grid/`
-- Planning **gap decorations** on grid-lanes (no `GapGeometry` is produced yet — see architecture.md §9)
+- Working on grid-lanes **gap decorations** (`GridLanesGapAccumulator`; see architecture.md §9)
 - Adding tests under `external/wpt/css/css-grid/grid-lanes/` or `grid_lanes_layout_algorithm_test.cc`
 - Consulting the CSS Grid 3 spec online (see **Spec:** above)
 

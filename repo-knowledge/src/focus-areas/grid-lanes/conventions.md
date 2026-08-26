@@ -45,7 +45,11 @@ core/
     grid/                            # REUSED machinery (track sizing, line resolver, sizing tree, subgrid, baselines)
       grid_layout_utils.cc           # BuildGridSizingTree<GridLanesLayoutAlgorithm> instantiations (~790, 827, 858)
     grid_lanes/                      # GRID-LANES SPECIFIC
+      grid_lane_data.h/.cc                # persisted per-lane item placement graph
+      grid_lanes_break_token_data.h       # fragmentation state
+      grid_lanes_gap_accumulator.h/.cc    # gap-decoration geometry
       grid_lanes_layout_algorithm.h/.cc   # core algorithm (orchestration, sizing, placement)
+      grid_lanes_item_iterator.h/.cc      # resumed-lane traversal
       grid_lanes_running_positions.h/.cc  # masonry placement engine (running positions, track openings)
       grid_lanes_item_group.h             # item-group / VirtualItems (track-sizing-performance)
       grid_lanes_node.h/.cc               # BlockNode extension (item construction, grouping, subgrid)
@@ -77,15 +81,11 @@ core/
 | `CSSGridLanesLayout` | `experimental` | yes | `runtime_enabled_features.json5` (~line 1661) | `RuntimeEnabledFeatures::CSSGridLanesLayoutEnabled()` |
 
 Notes:
-- No declared `depends_on` / `implied_by` for this flag (unlike `CSSGapDecoration`).
+- No declared `depends_on` / `implied_by` for this flag.
 - Because the status is `experimental`, the flag is **on by default in `blink_unittests`** (the test
   environment calls `WebRuntimeFeatures::EnableExperimentalFeatures(true)`), and **off** in stable
   Chrome. See testing.md.
-- Single guard point conceptually: the **CSS parser** rejects `display: grid-lanes` and the
-  `grid-lanes-*` / `flow-tolerance` properties when disabled, so no `LayoutGridLanes` is ever
-  created and the layout algorithm is never reached. There is no separate paint guard for grid-lanes
-  itself; **gap decorations**, however, ride their own shared paint path under the independent
-  `CSSGapDecoration` flag and are not wired up for grid-lanes yet (see architecture.md §9).
+- Grid-lanes parsing/layout remains independently gated by `CSSGridLanesLayout`. Gap decorations themselves are unflagged. For unfragmented grid-lanes with `HasGapRule()`, layout builds shared `GapGeometry` and attaches it only when the resulting geometry contains at least one main or cross gap. Fragmented grid-lanes omit gap geometry.
 
 ## How To: Enable / Run Grid-Lanes
 
@@ -95,7 +95,9 @@ Notes:
   flag-required tree and the virtual suite `disable-css-grid-lanes-layout` runs the parsing tests
   with `--disable-blink-features=CSSGridLanesLayout` to verify the off state.
 - **In a C++ unit test:** nothing special — `blink_unittests` enables experimental features, so
-  `display: grid-lanes` parses. (There is **no** `ScopedCSSGridLanesLayoutForTest`.)
+  `display: grid-lanes` parses. (No per-test scoper is needed for the enabled path;
+  `ScopedCSSGridLanesLayoutForTest` is generated and may be used for an explicit disabled-state C++
+  test.)
 
 ## How To: Trace an Item's Placement
 
@@ -111,8 +113,8 @@ Notes:
 5. For `grid-lanes-pack: dense`, also inspect
    `GetEligibleTrackOpeningAndUpdateGridLanesItemSpan` / `AccumulateTrackOpeningsToAccommodateItem`.
 6. The item is laid out, aligned (`AlignmentOffset`), and added via `container_builder_.AddResult`;
-   running positions advance in `UpdateRunningPositionsForSpan`, and the cursor in
-   `UpdateAutoPlacementCursor`.
+   running positions advance in `UpdateRunningPositionsForSpan`; only auto-placed items advance the
+   cursor via `UpdateAutoPlacementCursor`.
 7. For DevTools geometry, `LayoutGridLanes` exposes track positions/sizes via the cached
    `GridPlacementData` and static `LayoutGrid` helpers.
 

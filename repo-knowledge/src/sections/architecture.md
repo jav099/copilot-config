@@ -80,7 +80,7 @@ The **Main-Cross (MC) Gap Geometry** model stores gap positions compactly:
 - **GapGeometry** (GC'd): Stored on `PhysicalBoxFragment`, consumed by `GapDecorationsPainter`
 - Intersection points are computed on-demand during paint, not stored
 
-Layout populates `GapGeometry` via `FlexGapAccumulator`; paint reads it via `GapDecorationsPainter`.
+Grid, flex, multicol, and grid-lanes layout all produce `GapGeometry`. Flex uses `FlexGapAccumulator`; grid-lanes uses `GridLanesGapAccumulator`, which derives main gaps from grid-axis tracks and cross gaps from the placed lane graph. `GapDecorationsPainter` consumes the common fragment geometry.
 
 ## Style Layer
 
@@ -88,7 +88,4 @@ Layout populates `GapGeometry` via `FlexGapAccumulator`; paint reads it via `Gap
 
 ## Feature Flags
 
-New features use `RuntimeEnabledFeatures`. In tests, toggle with scoped helpers:
-```cpp
-ScopedCSSGapDecorationForTest scoped_gap_decoration(true);
-```
+Runtime feature scopers are feature-specific. Gap decorations are no longer runtime-flagged: decoration geometry is generally built when `HasGapRule()` is true (grid may also build `GapGeometry` for fragmentation suppression), and paint checks fragment `GapGeometry` directly. Grid-lanes remains gated by `CSSGridLanesLayout`.
