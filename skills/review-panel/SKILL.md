@@ -62,19 +62,19 @@ Issue all four `Task` calls in a **single response** (one per `agent_type`). Giv
 
 ### Allocate models
 
-Set `model` explicitly on every `Task` call. Use a mixed panel of
-`gpt-5.6-sol` and `claude-opus-5`:
+Set `model` explicitly on every `Task` call. Use GPT-6 Astra (`gpt-6-astra`)
+and, optionally, Opus (`claude-opus-5`):
 
-- Follow an exact model mix or reviewer-to-model mapping when the user specifies
-  one.
-- Otherwise, use **3 Sol + 1 Opus** for localized implementation, bug-fix, and
-  test-heavy changes.
-- Use **2 Sol + 2 Opus** for architecture-heavy, cross-cutting,
-  security-sensitive, or tradeoff-heavy changes.
+- Use **at most one Opus reviewer** across the four reviewers, including
+  user-specified model mixes or reviewer-to-model mappings.
+- Default to **3 Astra + 1 Opus** for all change types. Allow
+  **4 Astra + 0 Opus** when the user requests it.
+- Follow user-specified model mixes or mappings only when they meet this cap.
+  If a request exceeds the cap, ask the user for a compliant selection before
+  spawning any reviewers.
 - Assign models by relevance to the change. Do not permanently bind a model to
-  a reviewer role. Give Opus to the perspective or perspectives most central to
-  the change, and give Sol to the remaining perspective or perspectives.
-- Never use the same model for all four reviewers.
+  a reviewer role. When using Opus, assign it to the perspective most central to
+  the change, and assign Astra to all other roles.
 
 Before spawning, state the selected model composition and each
 reviewer-to-model assignment.
