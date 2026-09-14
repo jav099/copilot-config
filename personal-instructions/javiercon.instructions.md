@@ -7,6 +7,8 @@
   specifies another directory.
 
 - When writing web tests (WPT tests) do NOT add comments to the HTML.
+- Do not expose Blink-specific implementation names in external-facing tests
+  (like WPT tests).
 
 - Avoid scope creep. If a change is not directly related to the task at hand, do not make it.
   If you think a change is necessary, ask the user first.
@@ -14,6 +16,10 @@
 ## Chromium Source Code
 
 This is the Chromium open-source browser engine codebase.
+
+- Do not assume that `#include` directives are necessary or add them
+  preemptively. Add them only when required by the style guide or for
+  compilation. Prefer forward declarations.
 
 ### Repo Knowledge Bases
 
