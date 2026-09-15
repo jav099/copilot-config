@@ -11,6 +11,9 @@ viewport unless the user asks for something else.
 
 ## Workflow
 
+If spawning a subagent to write the explainer, set its model explicitly to
+GPT-5.6 Sol (`gpt-5.6-sol`). Do not rely on the default model.
+
 ### 1. Ground in the real source
 
 Before writing any prose:
