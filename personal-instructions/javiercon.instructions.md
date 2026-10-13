@@ -36,13 +36,18 @@ before diving into these areas, and pass the relevant files to sub-agents.
 
 ### Building and Testing
 
-Use the `edge-developer-core` plugin skills:
+Use the following build and test tools:
 
-- **`/edge-developer-core:build`**: Build Chromium targets with autoninja.
+- **`edge-agents:build`**: Use this skill by default to build Chromium targets.
+  If the BOB canvas is available, use the `edge-agents:bob` plugin instead.
+  Build through BOB and open its canvas extension to show build progress.
 - **`/edge-developer-core:test`**: Run gtest (unit/browser) and Blink web tests.
 
 Other useful skills are `/edge-developer-core:iterate` (build and test loop) and
 `/edge-developer-core:gncheck` (GN dependency checks).
+
+- Do not run gclient sync directly. Only when absolutely necessary, and ask the user before
+running it.
 
 ### Debugging with Playwright
 
