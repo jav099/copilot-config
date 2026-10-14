@@ -21,6 +21,8 @@ This is the Chromium open-source browser engine codebase.
   preemptively. Add them only when required by the style guide or for
   compilation. Prefer forward declarations.
 
+- IMPORTANT: When fixing merge conflicts DO NOT build or run gclient sync.
+
 ### Repo Knowledge Bases
 
 Curated, code-grounded knowledge for specific Blink areas lives under
@@ -48,6 +50,8 @@ Other useful skills are `/edge-developer-core:iterate` (build and test loop) and
 
 - Do not run gclient sync directly. Only when absolutely necessary, and ask the user before
 running it.
+
+- IMPORTANT: When fixing merge conflicts DO NOT build or run gclient sync.
 
 ### Debugging with Playwright
 
