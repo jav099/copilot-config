@@ -30,6 +30,8 @@ skill being installed. The instructions below are the self-contained fallback.
   duplicate state or intermediate variables.
 - Prefer direct, idiomatic use of existing APIs over custom plumbing that
   duplicates their behavior.
+- Reuse or extend existing structs, classes, and types when they fit. Do not
+  add a new type that duplicates the fields or role of an existing one.
 - Improve vague names and keep variables in the narrowest useful scope.
 - Match project conventions for imports, declarations, types, components,
   errors, and naming.
