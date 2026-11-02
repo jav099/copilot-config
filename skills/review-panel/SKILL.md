@@ -62,8 +62,8 @@ Issue all four `Task` calls in a **single response** (one per `agent_type`). Giv
 
 ### Allocate models
 
-Set `model` explicitly on every `Task` call. Use GPT-5.6 Sol
-(`gpt-5.6-sol`) as the baseline, with optional Gemini Argon
+Set `model` explicitly on every `Task` call. Use GPT-6.1 Sol
+(`gpt-6.1-sol`) as the baseline, with optional Gemini Argon
 (`gemini-4-argon`) and Claude Sonnet 5.5 (`claude-sonnet-5.5`) reviewers:
 
 - Use **at most one Sonnet reviewer** across the four reviewers, including
