@@ -23,19 +23,6 @@ This is the Chromium open-source browser engine codebase.
 
 - IMPORTANT: When fixing merge conflicts DO NOT build or run gclient sync.
 
-### Repo Knowledge Bases
-
-Curated, code-grounded knowledge for specific Blink areas lives under
-`~/.copilot/repo-knowledge/src/` (local, untracked, not part of the Chromium tree). Consult it
-before diving into these areas, and pass the relevant files to sub-agents.
-
-- **Focus areas:** `~/.copilot/repo-knowledge/src/focus-areas/<area>/`. Each contains
-  `_index.md` (read first), `architecture.md`, `conventions.md`, `testing.md`, and `gotchas.md`:
-  - `gap-decorations/`: CSS Gap Decorations (column/row rules) for grid, flex, and multicol.
-  - `grid-lanes/`: CSS Grid Level 3 masonry layout (in-tree name "grid-lanes").
-- **Base sections:** `~/.copilot/repo-knowledge/src/sections/`: repo-wide `architecture.md`,
-  `coding-conventions.md`, `gotchas.md`, `testing.md`, and `quick-reference.md`.
-
 ### Building and Testing
 
 Use the following build and test tools:
@@ -44,12 +31,6 @@ Use the following build and test tools:
   If the BOB canvas is available, use the `edge-agents:bob` plugin instead.
   Build through BOB and open its canvas extension to show build progress.
 - **`/edge-developer-core:test`**: Run gtest (unit/browser) and Blink web tests.
-
-Other useful skills are `/edge-developer-core:iterate` (build and test loop) and
-`/edge-developer-core:gncheck` (GN dependency checks).
-
-- Do not run gclient sync directly. Only when absolutely necessary, and ask the user before
-running it.
 
 - IMPORTANT: When fixing merge conflicts DO NOT build or run gclient sync.
 

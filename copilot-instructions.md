@@ -11,7 +11,7 @@
 
 ## Public Action Prohibition (HARD BLOCK)
 
-Never take visible actions in public or work-facing spaces on the user's behalf.
+Never take visible actions in public or work-facing spaces on the user's behalf WITHOUT the user's consent.
 
 ### Blocked Actions
 
@@ -32,7 +32,7 @@ Never take visible actions in public or work-facing spaces on the user's behalf.
 - **Draft response text** for the user to post manually
 - **Summarize feedback** and suggest responses
 
-Draft it and show it to the user. They'll post it themselves.
+Draft it and show it to the user. They'll post it themselves. You are allowed to do the things above ONLY if the user explicitly asks, or you ask the user and get EXPLICIT confrmation.
 
 ---
 
@@ -67,43 +67,9 @@ Always get explicit user confirmation before executing git commits or PRs:
 The main session will often be used as an orchestrator to spawn subagents for specific tasks.
 
 It is VERY important that when spawning subagents you background them and do not block the main session.
-The main session should continue to orchestrate, answer questions, do tasks and synthesize results from subagents.
+The main session should continue to orchestrate, answer questions, do tasks and synthesize results from subagents. We have access to several different subagents, which *can* be better for different tasks.
+You should try to delegate tasks to a specific subagent if it makes sense to do so.
 
-### Agent Routing
-
-| Situation | Agent(s) |
-| --------- | -------- |
-| Fast code search, finding files, grepping symbols, locating definitions | Explore |
-| Implementation planning, step-by-step strategy, identifying critical files | Plan |
-| Design decisions, tradeoff analysis | Architect |
-| Implementation, code review, debugging | Engineer |
-| UI/UX changes, theming, responsive layouts, accessibility, animations | UI/UX Engineer |
-| Server architecture, SSE/streaming, API design, process lifecycle | Backend Expert |
-| Investigation, codebase exploration | Researcher |
-| Multi-perspective review (before PR) | All relevant agents in parallel |
-
-### Context Passing to Subagents
-
-Subagents don't inherit instructions or repo knowledge automatically. You must pass relevant context in the prompt.
-
-Every delegation MUST include:
-
-1. **Original objective** — copied verbatim, not a reference
-2. **Task-specific context** — supporting material relevant to the task
-3. **Repo knowledge sections** — role-appropriate sections (see progressive disclosure below)
-
-### Progressive Disclosure (Repo Knowledge)
-
-When working in a repository with a knowledge directory at `~/.copilot/repo-knowledge/[repo-name]/`:
-
-| Agent | Files to Read and Pass |
-| ----- | ---------------------- |
-| Engineer | `coding-conventions.md`, `gotchas.md`, + relevant `focus-areas/*/conventions.md` |
-| Architect | `architecture.md`, `gotchas.md`, + relevant `focus-areas/*/architecture.md` |
-| Researcher | `architecture.md` |
-| PM | `quick-reference.md` |
-
-If no knowledge directory exists, proceed without repo context.
 
 ### Spawn Multiple Agents in Parallel When
 
