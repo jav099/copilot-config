@@ -36,7 +36,7 @@ Use the following build and test tools:
 
 ### Debugging with Playwright
 
-You can use the local Chromium build at `out/debug_full_x64` with Playwright to
+You can use the local Chromium build at `out/debug_full_x64` (or another build flavor if it exists, is recent and is needed or requested by the user) with Playwright to
 take screenshots, open HTML files, and inspect rendering. Playwright is
 available through `npx` (installed at `/tmp/node_modules`).
 
