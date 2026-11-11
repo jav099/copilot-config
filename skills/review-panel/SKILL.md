@@ -63,20 +63,20 @@ Issue all four `Task` calls in a **single response** (one per `agent_type`). Giv
 ### Allocate models
 
 Set `model` explicitly on every `Task` call. Use GPT-6.1 Sol
-(`gpt-6.1-sol`) as the baseline, with optional Gemini Argon
-(`gemini-4-argon`) and Claude Sonnet 5.5 (`claude-sonnet-5.5`) reviewers:
+(`gpt-6.1-sol`) as the baseline, with optional Gemini Carbon
+(`gemini-4-carbon`) and Claude Sonnet 5.5 (`claude-sonnet-5.5`) reviewers:
 
 - Use **at most one Sonnet reviewer** across the four reviewers, including
   user-specified model mixes or reviewer-to-model mappings.
-- Use **at most one Argon reviewer** across the four reviewers, including
+- Use **at most one Carbon reviewer** across the four reviewers, including
   user-specified model mixes or reviewer-to-model mappings.
 - Use Sol for every remaining reviewer.
-- Default to **2 Sol + 1 Argon + 1 Sonnet** for all change types.
+- Default to **2 Sol + 1 Carbon + 1 Sonnet** for all change types.
 - Follow user-specified model mixes or mappings only when they meet both caps.
   If a request exceeds either cap, ask the user for a compliant selection
   before spawning any reviewers.
 - Assign models by relevance to the change. Do not permanently bind a model to
-  a reviewer role. Assign Sonnet and Argon to the perspectives most central to
+  a reviewer role. Assign Sonnet and Carbon to the perspectives most central to
   the change, and assign Sol to all other roles.
 
 Before spawning, state the selected model composition and each
