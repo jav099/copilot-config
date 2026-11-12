@@ -36,6 +36,34 @@ Draft it and show it to the user. They'll post it themselves. You are allowed to
 
 ---
 
+## Project Notes and Artifacts
+
+- Use `~/projects` for persistent project plans, decisions, progress notes,
+  and small supporting artifacts. Resolve `~` to the current user's home
+  directory. Do not hard-code a machine-specific path.
+- Before reading or writing project notes, read `~/projects/AGENTS.md` and
+  any applicable instructions in its subdirectories.
+- Use `<repository>/<area>/<task>/`. Chromium uses `src/`. For example:
+  `~/projects/src/fonts/variable-fonts-windows/`.
+- At task start, check for existing notes relevant to the task. Read only
+  the relevant documents. Verify recorded findings against the current
+  source revision before relying on them.
+- When persistent notes are requested, create or update them there.
+  Keep existing progress notes current when the task changes their status,
+  decisions, or next steps. Do not create documents for routine work.
+- Treat this folder as the authoritative location for migrated documents.
+  Do not maintain duplicate editable copies in source checkouts.
+- Keep temporary files, build output, and large captures outside this
+  repository. Follow its AGENTS.md content limits.
+- Use relative links between documents and repository-relative source
+  paths. Record commit IDs when findings depend on a specific revision.
+- If the checkout is missing, report that before writing persistent notes.
+  Do not silently use another location.
+- Do not commit, push, or run Git synchronization commands without explicit
+  user approval. Preserve unrelated edits.
+
+---
+
 ## Git & PR Conventions
 
 ### Commits
