@@ -118,10 +118,6 @@ For each finding: Severity (Critical/Warning/Suggestion/Nit), Location (file:lin
 End with a verdict: LGTM / LGTM with nits / Needs changes.
 ```
 
-When reviewing Chromium code and `~/.copilot/repo-knowledge/src/` exists, pass
-the relevant `sections/*.md` and matching `focus-areas/*` files to engineer,
-architect, and code-simplifier so they review against project conventions.
-
 ## Step 5: Synthesize
 
 Merge the four reports into one. The final report must use this format every
