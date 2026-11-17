@@ -25,6 +25,10 @@ This is the Chromium open-source browser engine codebase.
 
 ### Building and Testing
 
+Chromium builds are expensive. Do not build after every small edit. Group
+related edits and build after medium or large changes, or before running tests
+that need updated binaries.
+
 Use the following build and test tools:
 
 - **`edge-agents:build`**: Use this skill by default to build Chromium targets.
