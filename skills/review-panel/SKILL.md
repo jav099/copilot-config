@@ -72,12 +72,12 @@ Set `model` explicitly on every `Task` call. Use GPT-6.1 Sol
   user-specified model mixes or reviewer-to-model mappings.
 - Use Sol for every remaining reviewer.
 - Default to **2 Sol + 1 Carbon + 1 Sonnet** for all change types.
-- Follow user-specified model mixes or mappings only when they meet both caps.
-  If a request exceeds either cap, ask the user for a compliant selection
-  before spawning any reviewers.
-- Assign models by relevance to the change. Do not permanently bind a model to
-  a reviewer role. Assign Sonnet and Carbon to the perspectives most central to
-  the change, and assign Sol to all other roles.
+- Assign Carbon only to **engineer** or **architect**, choosing the role most
+  relevant to the change. Never assign Carbon to code-simplifier or the specialist.
+- Follow user-specified model mixes or mappings only when they meet both caps
+  and the Carbon role restriction. If a request violates any of these rules,
+  ask the user for a compliant selection before spawning any reviewers.
+- Assign Sonnet to the most relevant remaining role and Sol to all other roles.
 
 Before spawning, state the selected model composition and each
 reviewer-to-model assignment.
