@@ -27,7 +27,7 @@ This is the Chromium open-source browser engine codebase.
 
 Chromium builds are expensive. Do not build after every small edit. Group
 related edits and build after medium or large changes, or before running tests
-that need updated binaries.
+that need updated binaries. For example, do not build just to check a variable rename.
 
 Use the following build and test tools:
 
