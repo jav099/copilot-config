@@ -4,33 +4,15 @@
 
 - Be concise. No filler, no fluff.
 - Never use emdashes. Use commas, periods, or parentheses instead.
-- Use ASD-STE100 for all technical text that users can see.
-- Code comments: only for non-obvious logic. Never reference past code or history (e.g., "this used to be X", "previously this was Y").
+- **Use ASD-STE100 for all technical text that users can see.**
+- Code comments: only for non-obvious logic. Never reference past code or history (e.g., "this used to be X", "previously this was Y"). 
+- Do not include implementation details in comments, as this is prone to drift. Explain the "what", and if necessary the "why" but not the "how".
 
 ---
 
 ## Public Action Prohibition (HARD BLOCK)
 
 Never take visible actions in public or work-facing spaces on the user's behalf WITHOUT the user's consent.
-
-### Blocked Actions
-
-- Publish/ready a draft PR
-- Add/remove reviewers
-- Reply to or react to PR/CL comments
-- Post PR/CL reviews
-- Send CL reply (non-draft) on Gerrit
-- Merge/complete a PR/CL
-- Send Slack/Teams messages
-- Approve or request changes on PRs
-- Resolve/close review threads
-
-### What You CAN Do
-
-- **Read** PR/CL comments to understand feedback
-- **Make code changes** based on that feedback
-- **Draft response text** for the user to post manually
-- **Summarize feedback** and suggest responses
 
 Draft it and show it to the user. They'll post it themselves. You are allowed to do the things above ONLY if the user explicitly asks, or you ask the user and get EXPLICIT confrmation.
 
@@ -81,6 +63,10 @@ Always get explicit user confirmation before executing git commits or PRs:
 2. Draft commit message
 3. Show draft to user and ask "Create this commit? (y/n)"
 4. Only execute after user confirms "yes"
+
+However, allow the user to explicitly request for you to not confirm about making a commit.
+If the user tells you to not ask them about a certain commit, feel free to not get user confirmation
+but ONLY if the user requests this.
 
 ### Pull Requests
 

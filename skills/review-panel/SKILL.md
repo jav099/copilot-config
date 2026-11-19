@@ -1,6 +1,6 @@
 ---
 name: review-panel
-description: "Delegate a code change to a panel of exactly four reviewer subagents and synthesize their findings into one report. Always uses the engineer, architect, and code-simplifier subagents, then selects a fourth specialist reviewer (blink-layout-reviewer, blink-reviewer, wpt-expert, ui-ux-engineer, backend-expert, or the built-in security-review) based on the nature of the change. Use when the user asks for a 'review panel', 'panel review', 'review with multiple reviewers', 'multi-agent review', 'get a panel to review my change', 'review my CL/PR with multiple agents', or supplies a Gerrit CL URL or GitHub PR URL (or asks to review local changes) and wants more than a single reviewer."
+description: "Delegate a code change to a panel of exactly four reviewer subagents and synthesize their findings into one report. Always uses the engineer, architect, and code-simplifier subagents, then selects a fourth specialist reviewer (chromium-python-reviewer, blink-layout-reviewer, blink-reviewer, wpt-expert, ui-ux-engineer, backend-expert, or the built-in security-review) based on the nature of the change. Use when the user asks for a 'review panel', 'panel review', 'review with multiple reviewers', 'multi-agent review', 'get a panel to review my change', 'review my CL/PR with multiple agents', or supplies a Gerrit CL URL or GitHub PR URL (or asks to review local changes) and wants more than a single reviewer."
 ---
 
 # Review Panel
@@ -47,6 +47,7 @@ Inspect the changed file paths and the kind of change. Pick the **first** match 
 | Change signal | Fourth reviewer |
 |---|---|
 | Security-sensitive: auth, crypto, IPC, sandbox, deserialization, parsing untrusted input, URL/permission/origin checks | `security-review` (built-in) |
+| Chromium Python: changed `.py` files, including `PRESUBMIT.py`, Python tests, and adjacent runner or dependency configuration that affects the Python change | `chromium-python-reviewer` |
 | Blink layout: `third_party/blink/renderer/core/layout/**`, esp. grid, masonry, flex, multicol, fragmentation, gap decorations | `blink-layout-reviewer` |
 | Other Blink renderer: paint, DOM, CSS/style, SVG, bindings under `third_party/blink/renderer/**` (non-layout) | `blink-reviewer` |
 | Tests: `third_party/blink/web_tests/**`, `**/wpt/**`, WPT/interop, CSS spec conformance | `wpt-expert` |
@@ -62,9 +63,9 @@ Issue all four `Task` calls in a **single response** (one per `agent_type`). Giv
 
 ### Allocate models
 
-Set `model` explicitly on every `Task` call. Use GPT-6.1 Sol
-(`gpt-6.1-sol`) as the baseline, with optional Gemini Carbon
-(`gemini-4-carbon`) and Claude Sonnet 5.5 (`claude-sonnet-5.5`) reviewers:
+Set `model` explicitly on every `Task` call. Use the latest Sol model
+as the baseline, with optional reviewers using the latest Carbon model
+and the latest Sonnet model:
 
 - Use **at most one Sonnet reviewer** across the four reviewers, including
   user-specified model mixes or reviewer-to-model mappings.
